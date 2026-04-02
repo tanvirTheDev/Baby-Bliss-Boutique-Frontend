@@ -30,8 +30,8 @@ export function PriceRangeSlider({
         className="py-4"
       />
       <div className="text-muted-foreground flex justify-between text-sm">
-        <span>${value[0]}</span>
-        <span>${value[1]}+</span>
+        <span>৳{value[0]}</span>
+        <span>৳{value[1]}+</span>
       </div>
     </div>
   );

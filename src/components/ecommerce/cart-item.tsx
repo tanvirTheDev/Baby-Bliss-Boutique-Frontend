@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { QuantitySelector } from "./quantity-selector";
 import { useCartStore } from "@/stores/cart-store";
 import type { CartItem as CartItemType } from "@/types";
+import { formatBDT } from "@/lib/currency";
 
 interface CartItemProps {
   item: CartItemType;
@@ -20,7 +21,7 @@ export function CartItem({ item }: CartItemProps) {
   return (
     <div className="bg-card flex gap-4 rounded-lg border p-4">
       {/* Product image */}
-      <div className="bg-muted relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md">
+      <div className="bg-muted relative h-20 w-20 shrink-0 overflow-hidden rounded-md">
         {primaryImage && (
           <Image
             src={primaryImage.url}
@@ -48,7 +49,7 @@ export function CartItem({ item }: CartItemProps) {
             </p>
           </div>
           <p className="text-sm font-semibold">
-            ${(effectivePrice * item.quantity).toFixed(2)}
+            {formatBDT(effectivePrice * item.quantity)}
           </p>
         </div>
 

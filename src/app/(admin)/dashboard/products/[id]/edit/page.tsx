@@ -1,11 +1,20 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { ArrowLeft, Upload, X, Plus, ImageIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  X,
+  Plus,
+  Save,
+  Trash2,
+  AlertTriangle,
+  ImageIcon,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +28,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCreateProduct } from "@/hooks/use-products";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/use-products";
 import { useCategories } from "@/hooks/use-categories";
 import { AGE_RANGES } from "@/config/constants";
 
@@ -34,27 +51,28 @@ interface ProductFormValues {
   stock: number;
 }
 
-interface ImagePreview {
-  file: File;
-  preview: string;
-}
-
-export default function AddProductPage() {
+export default function EditProductPage() {
+  const params = useParams();
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<ImagePreview[]>([]);
+  const productId = params.id as string;
+
+  const { data: product, isLoading } = useProduct(productId);
+  const { data: categories = [], isLoading: loadingCats } = useCategories();
+  const updateMutation = useUpdateProduct();
+  const deleteMutation = useDeleteProduct();
+
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-
-  const { data: categories = [], isLoading: loadingCats } = useCategories();
-  const createMutation = useCreateProduct();
+  const [showDelete, setShowDelete] = useState(false);
+  const [formReady, setFormReady] = useState(false);
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    formState: { errors },
+    reset,
+    formState: { errors, isDirty },
   } = useForm<ProductFormValues>({
     defaultValues: {
       name: "",
@@ -68,38 +86,29 @@ export default function AddProductPage() {
     },
   });
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files).filter((f) =>
-      ["image/jpeg", "image/png", "image/webp"].includes(f.type)
-    );
-    addFiles(files);
-  }, []);
-
-  const addFiles = (files: File[]) => {
-    const remaining = 5 - images.length;
-    const toAdd = files.slice(0, remaining);
-    const previews = toAdd.map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-    }));
-    setImages((prev) => [...prev, ...previews]);
-  };
-
-  const removeImage = (index: number) => {
-    setImages((prev) => {
-      const removed = prev[index];
-      URL.revokeObjectURL(removed.preview);
-      return prev.filter((_, i) => i !== index);
-    });
-  };
+  useEffect(() => {
+    if (product && !formReady) {
+      reset({
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        discount: product.discount ?? undefined,
+        categoryId: product.categoryId,
+        ageRange: product.ageRange ?? undefined,
+        tags: product.tags ?? [],
+        stock: product.stock,
+      });
+      setTags(product.tags ?? []);
+      setFormReady(true);
+    }
+  }, [product, formReady, reset]);
 
   const addTag = () => {
     const t = tagInput.trim();
     if (t && !tags.includes(t)) {
       const next = [...tags, t];
       setTags(next);
-      setValue("tags", next);
+      setValue("tags", next, { shouldDirty: true });
     }
     setTagInput("");
   };
@@ -107,37 +116,63 @@ export default function AddProductPage() {
   const removeTag = (tag: string) => {
     const next = tags.filter((t) => t !== tag);
     setTags(next);
-    setValue("tags", next);
+    setValue("tags", next, { shouldDirty: true });
   };
 
   const onSubmit = (values: ProductFormValues) => {
-    const formData = new FormData();
-    formData.append("name", values.name);
-    formData.append("description", values.description);
-    formData.append("price", String(values.price));
-    if (values.discount !== undefined) {
-      formData.append("discount", String(values.discount));
-    }
-    formData.append("categoryId", values.categoryId);
-    if (values.ageRange) {
-      formData.append("ageRange", values.ageRange);
-    }
-    formData.append("stock", String(values.stock));
+    updateMutation.mutate(
+      {
+        id: productId,
+        data: {
+          name: values.name,
+          description: values.description,
+          price: Number(values.price),
+          discount: values.discount ? Number(values.discount) : undefined,
+          categoryId: values.categoryId,
+          ageRange: values.ageRange || undefined,
+          tags: values.tags,
+          stock: Number(values.stock),
+        },
+      },
+      {
+        onSuccess: () => {
+          router.push("/dashboard/products");
+        },
+      }
+    );
+  };
 
-    values.tags?.forEach((tag) => {
-      formData.append("tags", tag);
-    });
-
-    images.forEach((img) => {
-      formData.append("images", img.file);
-    });
-
-    createMutation.mutate(formData, {
+  const handleDelete = () => {
+    deleteMutation.mutate(productId, {
       onSuccess: () => {
         router.push("/dashboard/products");
       },
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="text-brand-gold h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="flex h-96 flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Product not found.</p>
+        <Link href="/dashboard/products">
+          <Button variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Products
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const primaryImage = product.images?.find((i) => i.isPrimary) ?? product.images?.[0];
 
   return (
     <div className="space-y-6">
@@ -151,18 +186,25 @@ export default function AddProductPage() {
             <ArrowLeft className="h-3 w-3" />
             Back to Products
           </Link>
-          <h1 className="font-heading text-3xl font-bold">Add New Product</h1>
+          <h1 className="font-heading text-3xl font-bold">Edit Product</h1>
           <p className="text-muted-foreground text-sm">
-            Curate a new piece for the Baby Bliss collection.
+            Update details for &ldquo;{product.name}&rdquo;
           </p>
         </div>
-        <Button
-          className="bg-brand-gold hover:bg-brand-gold-dark text-white"
-          onClick={handleSubmit(onSubmit)}
-          disabled={createMutation.isPending}
-        >
-          {createMutation.isPending ? "Saving..." : "Save Changes"}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="destructive" size="sm" onClick={() => setShowDelete(true)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </Button>
+          <Button
+            className="bg-brand-gold hover:bg-brand-gold-dark text-white"
+            onClick={handleSubmit(onSubmit)}
+            disabled={updateMutation.isPending || !isDirty}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            {updateMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -183,7 +225,7 @@ export default function AddProductPage() {
                   </Label>
                   <Input
                     placeholder="e.g. Organic Cotton Pointelle Knit Romper"
-                    {...register("name")}
+                    {...register("name", { required: "Name is required" })}
                   />
                   {errors.name && (
                     <p className="text-destructive text-xs">{errors.name.message}</p>
@@ -196,7 +238,7 @@ export default function AddProductPage() {
                   <Textarea
                     placeholder="Tell the story of this garment..."
                     rows={5}
-                    {...register("description")}
+                    {...register("description", { required: "Description is required" })}
                   />
                   {errors.description && (
                     <p className="text-destructive text-xs">
@@ -207,82 +249,39 @@ export default function AddProductPage() {
               </CardContent>
             </Card>
 
-            {/* Editorial Media */}
+            {/* Current Images (read-only display) */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5" /> Editorial Media
+                  <ImageIcon className="h-5 w-5" /> Current Images
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDrop}
-                  className="hover:border-brand-gold/50 flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-12 transition-colors"
-                >
-                  <Upload className="text-muted-foreground mb-3 h-8 w-8" />
-                  <p className="text-sm font-medium">Drag and drop images here</p>
-                  <p className="text-muted-foreground text-xs">
-                    Accepts JPG, PNG, WEBP (Max 5MB per file)
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Select Files
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files) addFiles(Array.from(e.target.files));
-                      e.target.value = "";
-                    }}
-                  />
-                </div>
-
-                {images.length > 0 && (
+              <CardContent>
+                {product.images && product.images.length > 0 ? (
                   <div className="flex flex-wrap gap-3">
-                    {images.map((img, i) => (
+                    {product.images.map((img) => (
                       <div
-                        key={i}
-                        className="group relative h-20 w-20 overflow-hidden rounded-lg border"
+                        key={img.id}
+                        className="relative h-24 w-24 overflow-hidden rounded-lg border"
                       >
                         <Image
-                          src={img.preview}
-                          alt={`Preview ${i + 1}`}
+                          src={img.url}
+                          alt={img.altText ?? product.name}
                           fill
                           className="object-cover"
                         />
-                        {i === 0 && (
+                        {img.isPrimary && (
                           <span className="bg-brand-gold absolute top-0.5 left-0.5 rounded px-1 text-[8px] font-bold text-white">
                             Primary
                           </span>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => removeImage(i)}
-                          className="bg-destructive absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full text-white opacity-0 transition-opacity group-hover:opacity-100"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
                       </div>
                     ))}
-                    {images.length < 5 && (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="text-muted-foreground hover:border-brand-gold hover:text-brand-gold flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed transition-colors"
-                      >
-                        <Plus className="h-6 w-6" />
-                      </button>
-                    )}
                   </div>
+                ) : (
+                  <p className="text-muted-foreground py-6 text-center text-sm">
+                    No images uploaded yet.
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -307,7 +306,10 @@ export default function AddProductPage() {
                         step="0.01"
                         placeholder="0.00"
                         className="pl-7"
-                        {...register("price")}
+                        {...register("price", {
+                          required: "Price is required",
+                          valueAsNumber: true,
+                        })}
                       />
                     </div>
                     {errors.price && (
@@ -322,7 +324,7 @@ export default function AddProductPage() {
                       min="0"
                       max="100"
                       placeholder="0"
-                      {...register("discount")}
+                      {...register("discount", { valueAsNumber: true })}
                     />
                   </div>
                 </CardContent>
@@ -337,10 +339,27 @@ export default function AddProductPage() {
                     <Label className="text-xs font-semibold tracking-wider uppercase">
                       Stock Quantity
                     </Label>
-                    <Input type="number" placeholder="100" {...register("stock")} />
+                    <Input
+                      type="number"
+                      placeholder="100"
+                      {...register("stock", {
+                        required: "Stock is required",
+                        valueAsNumber: true,
+                      })}
+                    />
                     {errors.stock && (
                       <p className="text-destructive text-xs">{errors.stock.message}</p>
                     )}
+                  </div>
+                  <div className="bg-muted/60 rounded-lg p-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Rating</span>
+                      <span className="font-medium">{product.rating ?? 0} / 5</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Reviews</span>
+                      <span className="font-medium">{product.reviewsCount ?? 0}</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -349,34 +368,43 @@ export default function AddProductPage() {
 
           {/* ── Right sidebar ── */}
           <div className="space-y-6">
-            {/* Publishing */}
+            {/* Status */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Publishing</CardTitle>
+                <CardTitle className="text-sm">Product Info</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status</span>
-                  <Badge variant="secondary">Draft</Badge>
+                  <Badge variant={product.isActive ? "default" : "secondary"}>
+                    {product.isActive ? "Active" : "Inactive"}
+                  </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Visibility</span>
-                  <span className="font-medium">Public</span>
+                  <span className="text-muted-foreground">Created</span>
+                  <span className="font-medium">
+                    {new Date(product.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Schedule</span>
-                  <span className="font-medium">Immediate</span>
+                  <span className="text-muted-foreground">Updated</span>
+                  <span className="font-medium">
+                    {new Date(product.updatedAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">ID</span>
+                  <span className="max-w-[140px] truncate font-mono text-xs">
+                    {product.id}
+                  </span>
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button type="button" variant="outline" className="flex-1">
-                    Save as Draft
-                  </Button>
                   <Button
                     type="submit"
                     className="bg-brand-gold hover:bg-brand-gold-dark flex-1 text-white"
-                    disabled={createMutation.isPending}
+                    disabled={updateMutation.isPending || !isDirty}
                   >
-                    Publish Now
+                    {updateMutation.isPending ? "Saving..." : "Update Product"}
                   </Button>
                 </div>
               </CardContent>
@@ -399,7 +427,7 @@ export default function AddProductPage() {
                     <Select
                       value={watch("categoryId")}
                       onValueChange={(val) =>
-                        val && setValue("categoryId", val, { shouldValidate: true })
+                        val && setValue("categoryId", val, { shouldDirty: true })
                       }
                     >
                       <SelectTrigger>
@@ -414,11 +442,6 @@ export default function AddProductPage() {
                       </SelectContent>
                     </Select>
                   )}
-                  {errors.categoryId && (
-                    <p className="text-destructive text-xs">
-                      {errors.categoryId.message}
-                    </p>
-                  )}
                 </div>
 
                 {/* Age Range */}
@@ -426,7 +449,9 @@ export default function AddProductPage() {
                   <Label className="text-xs">Age Range</Label>
                   <Select
                     value={watch("ageRange") ?? ""}
-                    onValueChange={(val) => val && setValue("ageRange", val)}
+                    onValueChange={(val) =>
+                      val && setValue("ageRange", val, { shouldDirty: true })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select age range" />
@@ -482,6 +507,37 @@ export default function AddProductPage() {
           </div>
         </div>
       </form>
+
+      {/* ────── Delete Confirmation Dialog ────── */}
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <div className="bg-destructive/10 mx-auto flex h-12 w-12 items-center justify-center rounded-full">
+              <AlertTriangle className="text-destructive h-6 w-6" />
+            </div>
+            <DialogTitle className="text-center">Delete Product</DialogTitle>
+            <DialogDescription className="text-center">
+              Are you sure you want to delete{" "}
+              <span className="text-foreground font-semibold">
+                &ldquo;{product.name}&rdquo;
+              </span>
+              ? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDelete(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Product"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

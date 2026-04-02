@@ -1,5 +1,26 @@
 export const PRODUCT_SIZES = ["NB", "0-3M", "3-6M", "6-12M", "1Y", "2Y"] as const;
 
+export const AGE_RANGES = [
+  { value: "ZERO_TO_SIX_MONTHS", label: "0-6 Months" },
+  { value: "SIX_TO_TWELVE_MONTHS", label: "6-12 Months" },
+  { value: "ONE_YEAR", label: "1 Year" },
+  { value: "TWO_YEARS", label: "2 Years" },
+  { value: "THREE_YEARS", label: "3 Years" },
+  { value: "FOUR_YEARS", label: "4 Years" },
+  { value: "FIVE_YEARS", label: "5 Years" },
+  { value: "SIX_YEARS", label: "6 Years" },
+  { value: "SEVEN_YEARS", label: "7 Years" },
+  { value: "EIGHT_YEARS", label: "8 Years" },
+  { value: "NINE_YEARS", label: "9 Years" },
+  { value: "TEN_YEARS", label: "10 Years" },
+  { value: "ELEVEN_YEARS", label: "11 Years" },
+  { value: "TWELVE_YEARS", label: "12 Years" },
+  { value: "THIRTEEN_YEARS", label: "13 Years" },
+  { value: "FOURTEEN_YEARS", label: "14 Years" },
+] as const;
+
+export const AGE_GROUPS = AGE_RANGES;
+
 export const PRODUCT_CATEGORIES = [
   { value: "onesies", label: "Onesies" },
   { value: "sleepwear", label: "Sleepwear" },
@@ -13,12 +34,6 @@ export const GENDERS = [
   { value: "boy", label: "Boy" },
   { value: "girl", label: "Girl" },
   { value: "unisex", label: "Unisex" },
-] as const;
-
-export const AGE_GROUPS = [
-  { value: "newborn", label: "Newborn (0-3 months)" },
-  { value: "infant", label: "Infant (3-12 months)" },
-  { value: "toddler", label: "Toddler (1-2 years)" },
 ] as const;
 
 export const ORDER_STATUSES = [

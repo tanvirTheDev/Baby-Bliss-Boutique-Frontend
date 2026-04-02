@@ -1,14 +1,58 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, ShieldCheck, Lock, Heart } from "lucide-react";
 import { CheckoutForm } from "@/components/forms/checkout-form";
 import { OrderSummary } from "@/components/ecommerce/order-summary";
 import type { CheckoutFormValues } from "@/schemas/checkout";
+import { useCartStore } from "@/stores/cart-store";
+import { toast } from "sonner";
+import { useCreateShippingAddress } from "@/hooks/use-shipping-addresses";
+import { useCreateOrder } from "@/hooks/use-orders";
 
 export default function CheckoutPage() {
-  const handleSubmit = (values: CheckoutFormValues) => {
-    console.log("Checkout:", values);
+  const router = useRouter();
+  const { items, clearCart } = useCartStore();
+  const createAddress = useCreateShippingAddress();
+  const createOrder = useCreateOrder();
+
+  const handleSubmit = async (values: CheckoutFormValues) => {
+    if (items.length === 0) {
+      toast.error("Your cart is empty");
+      router.push("/shop");
+      return;
+    }
+
+    try {
+      const addressRes = await createAddress.mutateAsync({
+        fullName: values.fullName,
+        phoneNumber: values.phoneNumber,
+        division: values.division,
+        district: values.district,
+        upazila: values.upazila,
+        area: values.area || undefined,
+        street: values.street,
+        zip: values.zip || undefined,
+        isDefault: true,
+      });
+
+      const shippingAddressId = addressRes.data.id;
+
+      await createOrder.mutateAsync({
+        shippingAddressId,
+        items: items.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
+        notes: `PaymentMethod=${values.paymentMethod}; ContactEmail=${values.email}`,
+      });
+
+      clearCart();
+      toast.success("Order placed successfully");
+      router.push("/");
+    } catch (e) {
+      // hooks already toast, keep fallback
+      const err = e as { message?: string };
+      toast.error(err.message ?? "Failed to place order");
+    }
   };
 
   return (
@@ -29,7 +73,10 @@ export default function CheckoutPage() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-        <CheckoutForm onSubmit={handleSubmit} />
+        <CheckoutForm
+          onSubmit={handleSubmit}
+          isLoading={createAddress.isPending || createOrder.isPending}
+        />
         <div className="space-y-4">
           <OrderSummary showCheckoutButton={false} showDiscountCode={false} />
 

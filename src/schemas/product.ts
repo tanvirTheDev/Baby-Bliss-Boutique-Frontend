@@ -1,21 +1,18 @@
 import { z } from "zod";
 
-export const productFormSchema = z.object({
-  name: z.string().min(3, "Product name must be at least 3 characters"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
+export const createProductSchema = z.object({
+  name: z.string().min(1, "Product name is required").max(255),
+  description: z.string().min(1, "Description is required"),
   price: z.coerce.number().positive("Price must be greater than 0"),
-  salePrice: z.coerce.number().positive().optional().or(z.literal(0)),
-  costPrice: z.coerce.number().positive().optional().or(z.literal(0)),
-  sku: z.string().min(3, "SKU is required"),
+  discount: z.coerce.number().min(0).max(100).optional(),
+  categoryId: z.string().min(1, "Category is required"),
+  ageRange: z.string().optional(),
+  tags: z.array(z.string()).default([]),
   stock: z.coerce.number().int().min(0, "Stock cannot be negative"),
-  lowStockAlert: z.coerce.number().int().min(0).optional(),
-  category: z.string().min(1, "Category is required"),
-  gender: z.enum(["boy", "girl", "unisex"]),
-  ageGroup: z.enum(["newborn", "infant", "toddler"]),
-  sizes: z.array(z.string()).min(1, "Select at least one size"),
-  tags: z.array(z.string()).optional(),
-  metaTitle: z.string().optional(),
-  metaDescription: z.string().optional(),
 });
 
-export type ProductFormValues = z.infer<typeof productFormSchema>;
+export type CreateProductFormValues = z.infer<typeof createProductSchema>;
+
+export const updateProductSchema = createProductSchema.partial();
+
+export type UpdateProductFormValues = z.infer<typeof updateProductSchema>;

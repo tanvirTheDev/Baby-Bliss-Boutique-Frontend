@@ -1,7 +1,14 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { HeroBanner } from "@/components/ecommerce/hero-banner";
 import { TestimonialCard } from "@/components/ecommerce/testimonial-card";
 import { NewsletterForm } from "@/components/ecommerce/newsletter-form";
-import { siteConfig } from "@/config/site";
+import { StorefrontProductCard } from "@/components/ecommerce/storefront-product-card";
+import { Button } from "@/components/ui/button";
+import { useProducts } from "@/hooks/use-products";
+import { useCategories } from "@/hooks/use-categories";
 
 const TESTIMONIALS = [
   {
@@ -25,6 +32,16 @@ const TESTIMONIALS = [
 ];
 
 export default function HomePage() {
+  const { data: productsData, isLoading: loadingProducts } = useProducts({
+    limit: 6,
+    sortBy: "createdAt",
+    sortDir: "desc",
+  });
+  const { data: categories, isLoading: loadingCategories } = useCategories();
+
+  const products = productsData?.data ?? [];
+  const activeCategories = (categories ?? []).filter((c) => c.isActive).slice(0, 4);
+
   return (
     <div>
       <HeroBanner />
@@ -33,22 +50,62 @@ export default function HomePage() {
       <section className="container mx-auto px-4 py-16">
         <div className="mb-8 flex items-center justify-between">
           <h2 className="font-heading text-2xl font-bold">Explore our world</h2>
-          <a href="/shop" className="text-primary text-sm font-medium hover:underline">
+          <Link href="/shop" className="text-primary text-sm font-medium hover:underline">
             All categories &rarr;
-          </a>
+          </Link>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {["Newborn", "Infant Wear", "Toddler Style", "Gift Sets"].map((cat) => (
-            <a
-              key={cat}
-              href={`/shop?category=${cat.toLowerCase().replace(" ", "-")}`}
-              className="group bg-muted relative flex h-48 items-end overflow-hidden rounded-xl p-4"
-            >
-              <span className="relative z-10 text-sm font-semibold">{cat}</span>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-            </a>
-          ))}
+        {loadingCategories ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="text-brand-gold h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {activeCategories.map((cat) => (
+              <Link
+                key={cat.id}
+                href={`/shop?categoryId=${cat.id}`}
+                className="group bg-muted relative flex h-48 items-end overflow-hidden rounded-xl p-4"
+              >
+                <span className="relative z-10 text-sm font-semibold">{cat.name}</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Featured Products */}
+      <section className="container mx-auto px-4 py-16">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="font-heading text-2xl font-bold">New Arrivals</h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              The latest additions to our collection
+            </p>
+          </div>
+          <Link href="/shop">
+            <Button variant="outline" className="gap-2">
+              View All
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
+
+        {loadingProducts ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="text-brand-gold h-8 w-8 animate-spin" />
+          </div>
+        ) : products.length === 0 ? (
+          <p className="text-muted-foreground py-16 text-center">
+            No products yet. Check back soon!
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3">
+            {products.map((product) => (
+              <StorefrontProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Newsletter banner */}

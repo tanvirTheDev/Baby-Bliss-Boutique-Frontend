@@ -12,6 +12,7 @@ import {
   LogOut,
   HelpCircle,
   Plus,
+  FolderTree,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 const iconMap = {
   LayoutDashboard,
   Package,
+  FolderTree,
   ShoppingBag,
   Users,
   BarChart3,
@@ -37,6 +39,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
   { label: "Inventory", href: "/dashboard/products", icon: "Package" },
+  { label: "Categories", href: "/dashboard/categories", icon: "FolderTree" },
   { label: "Orders", href: "/dashboard/orders", icon: "ShoppingBag" },
   { label: "Customers", href: "/dashboard/customers", icon: "Users" },
   { label: "Analytics", href: "/dashboard/analytics", icon: "BarChart3" },

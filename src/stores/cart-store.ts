@@ -5,7 +5,12 @@ import { FREE_SHIPPING_THRESHOLD, TAX_RATE } from "@/config/constants";
 
 interface CartState {
   items: CartItem[];
-  addItem: (product: Product, size: ProductSize, color: ProductColor) => void;
+  addItem: (
+    product: Product,
+    size: ProductSize,
+    color: ProductColor,
+    quantity?: number
+  ) => void;
   removeItem: (productId: string, size: ProductSize, colorName: string) => void;
   updateQuantity: (
     productId: string,
@@ -26,7 +31,8 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
 
-      addItem: (product, size, color) => {
+      addItem: (product, size, color, quantity = 1) => {
+        const qty = Math.max(1, Math.floor(quantity));
         set((state) => {
           const existingIndex = state.items.findIndex(
             (item) =>
@@ -39,12 +45,12 @@ export const useCartStore = create<CartState>()(
             const updated = [...state.items];
             updated[existingIndex] = {
               ...updated[existingIndex],
-              quantity: updated[existingIndex].quantity + 1,
+              quantity: updated[existingIndex].quantity + qty,
             };
             return { items: updated };
           }
 
-          return { items: [...state.items, { product, quantity: 1, size, color }] };
+          return { items: [...state.items, { product, quantity: qty, size, color }] };
         });
       },
 

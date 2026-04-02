@@ -27,10 +27,12 @@ export function CheckoutForm({ onSubmit, isLoading }: CheckoutFormProps) {
     defaultValues: {
       fullName: "",
       email: "",
-      phone: "",
+      phoneNumber: "",
+      division: "",
+      district: "",
+      upazila: "",
+      area: "",
       street: "",
-      city: "",
-      state: "",
       zip: "",
       paymentMethod: "credit_card",
     },
@@ -71,9 +73,9 @@ export function CheckoutForm({ onSubmit, isLoading }: CheckoutFormProps) {
           </div>
           <div className="space-y-2">
             <Label className="text-xs font-medium">Phone Number</Label>
-            <Input placeholder="+1 (555) 000-0000" {...register("phone")} />
-            {errors.phone && (
-              <p className="text-destructive text-xs">{errors.phone.message}</p>
+            <Input placeholder="01XXXXXXXXX" {...register("phoneNumber")} />
+            {errors.phoneNumber && (
+              <p className="text-destructive text-xs">{errors.phoneNumber.message}</p>
             )}
           </div>
         </CardContent>
@@ -90,35 +92,54 @@ export function CheckoutForm({ onSubmit, isLoading }: CheckoutFormProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Division</Label>
+              <Input placeholder="Dhaka" {...register("division")} />
+              {errors.division && (
+                <p className="text-destructive text-xs">{errors.division.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">District</Label>
+              <Input placeholder="Dhaka" {...register("district")} />
+              {errors.district && (
+                <p className="text-destructive text-xs">{errors.district.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Upazila</Label>
+              <Input placeholder="Dhanmondi" {...register("upazila")} />
+              {errors.upazila && (
+                <p className="text-destructive text-xs">{errors.upazila.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Area (optional)</Label>
+              <Input placeholder="Road 10" {...register("area")} />
+              {errors.area && (
+                <p className="text-destructive text-xs">{errors.area.message}</p>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label className="text-xs font-medium">Street Address</Label>
-            <Input placeholder="123 Serenity Lane" {...register("street")} />
+            <Input placeholder="House 12, Road 10" {...register("street")} />
             {errors.street && (
               <p className="text-destructive text-xs">{errors.street.message}</p>
             )}
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">City</Label>
-              <Input placeholder="Evergreen" {...register("city")} />
-              {errors.city && (
-                <p className="text-destructive text-xs">{errors.city.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">State</Label>
-              <Input placeholder="CA" {...register("state")} />
-              {errors.state && (
-                <p className="text-destructive text-xs">{errors.state.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">ZIP</Label>
-              <Input placeholder="90210" {...register("zip")} />
-              {errors.zip && (
-                <p className="text-destructive text-xs">{errors.zip.message}</p>
-              )}
-            </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">ZIP (optional)</Label>
+            <Input placeholder="1207" {...register("zip")} />
+            {errors.zip && (
+              <p className="text-destructive text-xs">{errors.zip.message}</p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -141,7 +162,7 @@ export function CheckoutForm({ onSubmit, isLoading }: CheckoutFormProps) {
             }
             className="space-y-3"
           >
-            <label className="hover:bg-muted/50 has-[[data-state=checked]]:border-primary flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors">
+            <label className="hover:bg-muted/50 has-data-[state=checked]:border-primary flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors">
               <RadioGroupItem value="credit_card" />
               <CreditCard className="text-muted-foreground h-5 w-5" />
               <div className="flex-1">
@@ -151,7 +172,7 @@ export function CheckoutForm({ onSubmit, isLoading }: CheckoutFormProps) {
                 </p>
               </div>
             </label>
-            <label className="hover:bg-muted/50 has-[[data-state=checked]]:border-primary flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors">
+            <label className="hover:bg-muted/50 has-data-[state=checked]:border-primary flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors">
               <RadioGroupItem value="paypal" />
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M7.076 21.337H2.47a.641.641 0 01-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106z" />

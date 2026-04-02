@@ -10,7 +10,7 @@ export const siteConfig = {
     pinterest: "https://pinterest.com/babyblissboutique",
   },
   features: [
-    { label: "Free Shipping", description: "On orders over $50" },
+    { label: "Free Shipping", description: "On orders over ৳50" },
     { label: "Easy Returns", description: "30-day returns" },
     { label: "100% Cotton", description: "Organic materials" },
     { label: "Secure Checkout", description: "SSL encrypted" },

@@ -8,6 +8,7 @@ import { useCartStore } from "@/stores/cart-store";
 import { FREE_SHIPPING_THRESHOLD } from "@/config/constants";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { formatBDT } from "@/lib/currency";
 
 interface OrderSummaryProps {
   showCheckoutButton?: boolean;
@@ -36,17 +37,17 @@ export function OrderSummary({
       <CardContent className="space-y-4">
         <div className="flex justify-between text-sm">
           <span>Subtotal</span>
-          <span className="font-medium">${subtotal.toFixed(2)}</span>
+          <span className="font-medium">{formatBDT(subtotal)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span>Shipping (Standard)</span>
           <span className={cn("font-medium", isFreeShipping && "text-brand-success")}>
-            {isFreeShipping ? "Free" : `$${shipping.toFixed(2)}`}
+            {isFreeShipping ? "Free" : formatBDT(shipping)}
           </span>
         </div>
         <div className="flex justify-between text-sm">
           <span>Tax</span>
-          <span className="font-medium">${tax.toFixed(2)}</span>
+          <span className="font-medium">{formatBDT(tax)}</span>
         </div>
 
         {showDiscountCode && (
@@ -72,7 +73,7 @@ export function OrderSummary({
           <span className="font-medium">
             {showCheckoutButton ? "Estimated Total" : "Total"}
           </span>
-          <span className="text-xl font-bold">${total.toFixed(2)}</span>
+          <span className="text-xl font-bold">{formatBDT(total)}</span>
         </div>
 
         {showCheckoutButton && (
@@ -85,7 +86,7 @@ export function OrderSummary({
 
         {!isFreeShipping && (
           <p className="text-muted-foreground text-center text-xs">
-            Free shipping on orders over ${FREE_SHIPPING_THRESHOLD}
+            Free shipping on orders over {formatBDT(FREE_SHIPPING_THRESHOLD)}
           </p>
         )}
       </CardContent>

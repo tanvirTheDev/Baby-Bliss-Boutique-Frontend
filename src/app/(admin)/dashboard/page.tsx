@@ -21,7 +21,7 @@ import Link from "next/link";
 const STATS = [
   {
     label: "Total Revenue",
-    value: "$42,850.00",
+    value: "৳42,850.00",
     change: "+12.5%",
     positive: true,
     icon: DollarSign,
@@ -59,7 +59,7 @@ const RECENT_ORDERS = [
     initials: "EH",
     status: "delivered",
     date: "Oct 24, 2025",
-    amount: "$124.50",
+    amount: "৳124.50",
   },
   {
     id: "#BB-8920",
@@ -67,7 +67,7 @@ const RECENT_ORDERS = [
     initials: "JM",
     status: "processing",
     date: "Oct 24, 2025",
-    amount: "$89.00",
+    amount: "৳89.00",
   },
   {
     id: "#BB-8919",
@@ -75,7 +75,7 @@ const RECENT_ORDERS = [
     initials: "SA",
     status: "delivered",
     date: "Oct 23, 2025",
-    amount: "$240.00",
+    amount: "৳240.00",
   },
 ];
 
@@ -85,9 +85,9 @@ const LOW_STOCK = [
 ];
 
 const TOP_SELLING = [
-  { rank: 1, name: "Bamboo Swaddle", sold: "1,240 sold", revenue: "$3,420" },
-  { rank: 2, name: "Sleepy Sheep Lamp", sold: "890 sold", revenue: "$2,890" },
-  { rank: 3, name: "Knitted Baby Cap", sold: "650 sold", revenue: "$1,450" },
+  { rank: 1, name: "Bamboo Swaddle", sold: "1,240 sold", revenue: "৳3,420" },
+  { rank: 2, name: "Sleepy Sheep Lamp", sold: "890 sold", revenue: "৳2,890" },
+  { rank: 3, name: "Knitted Baby Cap", sold: "650 sold", revenue: "৳1,450" },
 ];
 
 export default function DashboardPage() {

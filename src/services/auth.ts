@@ -2,12 +2,12 @@ import { api } from "./api";
 
 export interface AuthUser {
   id: string;
-  fullName: string;
+  fullName?: string;
   email: string;
-  phoneNumber: string | null;
+  phoneNumber?: string | null;
   role: "CUSTOMER" | "ADMIN";
-  isEmailVerified: boolean;
-  createdAt: string;
+  isEmailVerified?: boolean;
+  createdAt?: string;
 }
 
 interface RegisterResponse {

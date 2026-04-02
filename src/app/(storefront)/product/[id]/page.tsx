@@ -2,28 +2,26 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ShoppingCart, Heart } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PriceDisplay } from "@/components/ecommerce/price-display";
 import { RatingStars } from "@/components/ecommerce/rating-stars";
 import { SizePicker } from "@/components/ecommerce/size-picker";
-import { ColorSwatch } from "@/components/ecommerce/color-swatch";
 import { QuantitySelector } from "@/components/ecommerce/quantity-selector";
 import { ProductGrid } from "@/components/ecommerce/product-grid";
-import type { ProductSize, ProductColor } from "@/types";
+import type { ProductSize } from "@/types";
+import { useCartStore } from "@/stores/cart-store";
+import { DEFAULT_CART_COLOR } from "@/lib/product-adapter";
+import { toast } from "sonner";
 
 export default function ProductDetailPage() {
+  const router = useRouter();
   const [selectedSize, setSelectedSize] = useState<ProductSize | null>("0-3M");
-  const [selectedColor, setSelectedColor] = useState<ProductColor | null>(null);
   const [quantity, setQuantity] = useState(1);
-
-  const placeholderColors: ProductColor[] = [
-    { name: "Rose Pink", hex: "#f4a5c0" },
-    { name: "Soft Cream", hex: "#faf0e6" },
-    { name: "Sky Blue", hex: "#b0d4f1" },
-  ];
+  const addItem = useCartStore((s) => s.addItem);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -56,22 +54,6 @@ export default function ProductDetailPage() {
 
           <PriceDisplay price={60} salePrice={48} size="lg" />
 
-          {/* Color */}
-          <div className="space-y-3">
-            <p className="text-sm font-medium">
-              Color:{" "}
-              <span className="text-muted-foreground font-normal capitalize">
-                {selectedColor?.name ?? "Select a color"}
-              </span>
-            </p>
-            <ColorSwatch
-              colors={placeholderColors}
-              selectedColor={selectedColor}
-              onSelect={setSelectedColor}
-              size="md"
-            />
-          </div>
-
           {/* Size */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -88,13 +70,92 @@ export default function ProductDetailPage() {
               onIncrement={() => setQuantity((q) => q + 1)}
               onDecrement={() => setQuantity((q) => Math.max(1, q - 1))}
             />
-            <Button className="bg-brand-olive hover:bg-brand-olive/90 flex-1 text-white">
+            <Button
+              className="bg-brand-olive hover:bg-brand-olive/90 flex-1 text-white"
+              onClick={() => {
+                if (!selectedSize) {
+                  toast.error("Please select a size");
+                  return;
+                }
+                // TODO: replace with real product data when this page is wired to backend
+                addItem(
+                  {
+                    id: "placeholder",
+                    name: "Rose Petal Tulle Baby Dress",
+                    slug: "placeholder",
+                    description: "placeholder",
+                    price: 60,
+                    salePrice: 48,
+                    sku: "placeholder",
+                    stock: 999,
+                    category: "essentials",
+                    images: [],
+                    sizes: ["NB", "0-3M", "3-6M", "6-12M", "1Y", "2Y"],
+                    colors: [DEFAULT_CART_COLOR],
+                    gender: "unisex",
+                    ageGroup: "infant",
+                    tags: [],
+                    rating: 0,
+                    reviewCount: 0,
+                    isFeatured: false,
+                    isOrganic: false,
+                    status: "active",
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  },
+                  selectedSize,
+                  DEFAULT_CART_COLOR,
+                  quantity
+                );
+                toast.success("Added to cart");
+              }}
+            >
               <ShoppingCart className="mr-2 h-4 w-4" />
               Add to Cart
             </Button>
           </div>
 
-          <Button variant="outline" className="w-full">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              if (!selectedSize) {
+                toast.error("Please select a size");
+                return;
+              }
+              // TODO: replace with real product data when this page is wired to backend
+              addItem(
+                {
+                  id: "placeholder",
+                  name: "Rose Petal Tulle Baby Dress",
+                  slug: "placeholder",
+                  description: "placeholder",
+                  price: 60,
+                  salePrice: 48,
+                  sku: "placeholder",
+                  stock: 999,
+                  category: "essentials",
+                  images: [],
+                  sizes: ["NB", "0-3M", "3-6M", "6-12M", "1Y", "2Y"],
+                  colors: [DEFAULT_CART_COLOR],
+                  gender: "unisex",
+                  ageGroup: "infant",
+                  tags: [],
+                  rating: 0,
+                  reviewCount: 0,
+                  isFeatured: false,
+                  isOrganic: false,
+                  status: "active",
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+                selectedSize,
+                DEFAULT_CART_COLOR,
+                quantity
+              );
+              router.push("/checkout");
+            }}
+          >
             Buy Now
           </Button>
 

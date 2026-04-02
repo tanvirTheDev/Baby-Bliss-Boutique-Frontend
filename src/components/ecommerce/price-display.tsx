@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { formatBDT } from "@/lib/currency";
 
 interface PriceDisplayProps {
   price: number;
@@ -32,7 +33,7 @@ export function PriceDisplay({
           isOnSale ? "text-foreground" : "text-foreground"
         )}
       >
-        ${(isOnSale ? salePrice : price).toFixed(2)}
+        {formatBDT(isOnSale ? salePrice! : price)}
       </span>
       {isOnSale && (
         <>
@@ -42,7 +43,7 @@ export function PriceDisplay({
               size === "lg" ? "text-base" : "text-sm"
             )}
           >
-            ${price.toFixed(2)}
+            {formatBDT(price)}
           </span>
           <Badge
             variant="secondary"
