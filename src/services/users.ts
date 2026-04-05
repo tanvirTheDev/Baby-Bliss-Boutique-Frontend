@@ -17,6 +17,7 @@ export interface BackendUser {
 export interface ListUsersParams {
   role?: "CUSTOMER" | "ADMIN";
   isActive?: boolean;
+  search?: string;
   page?: number;
   limit?: number;
 }
@@ -40,6 +41,12 @@ export interface GetMeResponse {
   data: BackendUser;
 }
 
+export interface SingleUserResponse {
+  success: boolean;
+  message: string;
+  data: BackendUser;
+}
+
 export interface UpdateMeInput {
   fullName?: string;
   email?: string;
@@ -47,9 +54,20 @@ export interface UpdateMeInput {
   avatar?: string;
 }
 
+export type AdminUpdateUserInput = UpdateMeInput;
+
 export interface UpdateMeResponse {
   message: string;
   data: BackendUser;
+}
+
+/** Admin-only: create customer account (password required). */
+export interface AdminCreateUserInput {
+  fullName: string;
+  email: string;
+  password: string;
+  phoneNumber?: string;
+  avatar?: string;
 }
 
 export const userService = {
@@ -57,9 +75,14 @@ export const userService = {
     const q: Record<string, string> = {};
     if (params?.role) q.role = params.role;
     if (params?.isActive !== undefined) q.isActive = String(params.isActive);
+    if (params?.search?.trim()) q.search = params.search.trim();
     if (params?.page) q.page = String(params.page);
     if (params?.limit) q.limit = String(params.limit);
     return api.get<ListUsersResponse>("/users", q);
+  },
+
+  getById(id: string) {
+    return api.get<SingleUserResponse>(`/users/${id}`);
   },
 
   getMe() {
@@ -68,6 +91,14 @@ export const userService = {
 
   updateMe(data: UpdateMeInput) {
     return api.patch<UpdateMeResponse>("/users/me", data);
+  },
+
+  updateById(id: string, data: AdminUpdateUserInput) {
+    return api.patch<SingleUserResponse>(`/users/${id}`, data);
+  },
+
+  create(data: AdminCreateUserInput) {
+    return api.post<SingleUserResponse>("/users", data);
   },
 
   setUserActive(userId: string, isActive: boolean) {

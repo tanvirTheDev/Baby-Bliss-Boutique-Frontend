@@ -13,7 +13,7 @@ import { useCreateOrder } from "@/hooks/use-orders";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, clearCart } = useCartStore();
+  const { items, appliedCoupon, clearCart } = useCartStore();
   const createAddress = useCreateShippingAddress();
   const createOrder = useCreateOrder();
 
@@ -78,7 +78,7 @@ export default function CheckoutPage() {
           isLoading={createAddress.isPending || createOrder.isPending}
         />
         <div className="space-y-4">
-          <OrderSummary showCheckoutButton={false} showDiscountCode={false} />
+          <OrderSummary showCheckoutButton={false} showDiscountCode={true} />
 
           {/* Trust badges */}
           <div className="text-muted-foreground flex items-center justify-center gap-6 pt-2">

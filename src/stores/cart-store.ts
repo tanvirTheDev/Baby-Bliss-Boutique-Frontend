@@ -3,8 +3,15 @@ import { persist } from "zustand/middleware";
 import type { CartItem, ProductSize, ProductColor, Product } from "@/types";
 import { FREE_SHIPPING_THRESHOLD, TAX_RATE } from "@/config/constants";
 
+export interface AppliedCoupon {
+  code: string;
+  discountAmount: number;
+}
+
 interface CartState {
   items: CartItem[];
+  appliedCoupon: AppliedCoupon | null;
+  setAppliedCoupon: (coupon: AppliedCoupon | null) => void;
   addItem: (
     product: Product,
     size: ProductSize,
@@ -23,6 +30,7 @@ interface CartState {
   getSubtotal: () => number;
   getShipping: () => number;
   getTax: () => number;
+  getCouponDiscount: () => number;
   getTotal: () => number;
 }
 
@@ -30,6 +38,9 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      appliedCoupon: null,
+
+      setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
 
       addItem: (product, size, color, quantity = 1) => {
         const qty = Math.max(1, Math.floor(quantity));
@@ -47,10 +58,13 @@ export const useCartStore = create<CartState>()(
               ...updated[existingIndex],
               quantity: updated[existingIndex].quantity + qty,
             };
-            return { items: updated };
+            return { items: updated, appliedCoupon: null };
           }
 
-          return { items: [...state.items, { product, quantity: qty, size, color }] };
+          return {
+            items: [...state.items, { product, quantity: qty, size, color }],
+            appliedCoupon: null,
+          };
         });
       },
 
@@ -64,6 +78,7 @@ export const useCartStore = create<CartState>()(
                 item.color.name === colorName
               )
           ),
+          appliedCoupon: null,
         }));
       },
 
@@ -77,10 +92,11 @@ export const useCartStore = create<CartState>()(
               ? { ...item, quantity }
               : item
           ),
+          appliedCoupon: null,
         }));
       },
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], appliedCoupon: null }),
 
       getItemCount: () => get().items.reduce((acc, item) => acc + item.quantity, 0),
 
@@ -98,7 +114,13 @@ export const useCartStore = create<CartState>()(
 
       getTax: () => get().getSubtotal() * TAX_RATE,
 
-      getTotal: () => get().getSubtotal() + get().getShipping() + get().getTax(),
+      getCouponDiscount: () => get().appliedCoupon?.discountAmount ?? 0,
+
+      getTotal: () => {
+        const gross = get().getSubtotal() + get().getShipping() + get().getTax();
+        const discount = get().getCouponDiscount();
+        return Math.max(0, gross - discount);
+      },
     }),
     { name: "baby-bliss-cart" }
   )
