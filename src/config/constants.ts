@@ -36,6 +36,13 @@ export const GENDERS = [
   { value: "unisex", label: "Unisex" },
 ] as const;
 
+/** Prisma `Gender` — use for product create/update API */
+export const PRODUCT_GENDER_API = [
+  { value: "UNISEX", label: "Unisex" },
+  { value: "BOYS", label: "Boys" },
+  { value: "GIRLS", label: "Girls" },
+] as const;
+
 export const ORDER_STATUSES = [
   { value: "pending", label: "Pending", color: "bg-yellow-100 text-yellow-800" },
   { value: "processing", label: "Processing", color: "bg-blue-100 text-blue-800" },

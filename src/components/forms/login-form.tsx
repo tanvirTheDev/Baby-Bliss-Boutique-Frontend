@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,14 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "", rememberMe: false },
   });
+
+  const rememberMe = useWatch({ control, name: "rememberMe" }) ?? false;
 
   return (
     <div className="w-full max-w-md space-y-6">
@@ -144,7 +146,7 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
           <div className="flex items-center space-x-2">
             <Checkbox
               id="rememberMe"
-              checked={watch("rememberMe")}
+              checked={rememberMe}
               onCheckedChange={(checked) => setValue("rememberMe", checked === true)}
             />
             <Label htmlFor="rememberMe" className="text-sm font-normal">

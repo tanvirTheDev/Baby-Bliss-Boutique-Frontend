@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import {
   ArrowLeft,
-  X,
   Plus,
   Save,
   Trash2,
   AlertTriangle,
   ImageIcon,
   Loader2,
+  Star,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,9 +37,26 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/use-products";
+import {
+  useProduct,
+  useUpdateProduct,
+  useDeleteProduct,
+  useAddProductImage,
+  useDeleteProductImage,
+  useSetPrimaryProductImage,
+} from "@/hooks/use-products";
+import {
+  useAdjustVariantStock,
+  useCreateProductVariant,
+  useDeleteProductVariant,
+  useUpdateProductVariant,
+  useVariantsByProduct,
+} from "@/hooks/use-product-variants";
 import { useCategories } from "@/hooks/use-categories";
-import { AGE_RANGES } from "@/config/constants";
+import { AGE_RANGES, PRODUCT_GENDER_API } from "@/config/constants";
+import { totalVariantStock } from "@/services/products";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 interface ProductFormValues {
   name: string;
@@ -46,9 +64,8 @@ interface ProductFormValues {
   price: number;
   discount?: number;
   categoryId: string;
-  ageRange?: string;
+  gender: string;
   tags: string[];
-  stock: number;
 }
 
 export default function EditProductPage() {
@@ -60,17 +77,28 @@ export default function EditProductPage() {
   const { data: categories = [], isLoading: loadingCats } = useCategories();
   const updateMutation = useUpdateProduct();
   const deleteMutation = useDeleteProduct();
+  const addImageMutation = useAddProductImage();
+  const deleteImageMutation = useDeleteProductImage();
+  const setPrimaryMutation = useSetPrimaryProductImage();
+  const imageFileRef = useRef<HTMLInputElement>(null);
+
+  const { data: variants = [], isLoading: loadingVariants } =
+    useVariantsByProduct(productId);
+  const createVariantMutation = useCreateProductVariant();
+  const updateVariantMutation = useUpdateProductVariant();
+  const deleteVariantMutation = useDeleteProductVariant();
+  const adjustStockMutation = useAdjustVariantStock();
+  const [stockDraft, setStockDraft] = useState<Record<string, number>>({});
+  const [newVariantAge, setNewVariantAge] = useState<string>("");
 
   const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
   const [showDelete, setShowDelete] = useState(false);
-  const [formReady, setFormReady] = useState(false);
 
   const {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     reset,
     formState: { errors, isDirty },
   } = useForm<ProductFormValues>({
@@ -80,67 +108,103 @@ export default function EditProductPage() {
       price: 0,
       discount: undefined,
       categoryId: "",
-      ageRange: undefined,
+      gender: "UNISEX",
       tags: [],
-      stock: 0,
     },
   });
 
+  const categoryIdW = useWatch({ control, name: "categoryId" });
+  const genderW = useWatch({ control, name: "gender" });
+  const tagsW = useWatch({ control, name: "tags" }) ?? [];
+
+  const lastInitProductId = useRef<string | null>(null);
   useEffect(() => {
-    if (product && !formReady) {
-      reset({
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        discount: product.discount ?? undefined,
-        categoryId: product.categoryId,
-        ageRange: product.ageRange ?? undefined,
-        tags: product.tags ?? [],
-        stock: product.stock,
-      });
-      setTags(product.tags ?? []);
-      setFormReady(true);
-    }
-  }, [product, formReady, reset]);
+    if (!product) return;
+    if (lastInitProductId.current === product.id) return;
+    lastInitProductId.current = product.id;
+    reset({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      discount: product.discount ?? undefined,
+      categoryId: product.categoryId,
+      gender: product.gender ?? "UNISEX",
+      tags: (product.tags ?? []).filter((t) => !String(t).startsWith("SIZE:")),
+    });
+  }, [product, reset]);
+
+  const variantsStockKey = useMemo(
+    () => variants.map((v) => `${v.id}:${v.stock}`).join("|"),
+    [variants]
+  );
+
+  useEffect(() => {
+    const m = Object.fromEntries(variants.map((v) => [v.id, v.stock]));
+    queueMicrotask(() => {
+      setStockDraft(m);
+    });
+  }, [variantsStockKey, variants]);
 
   const addTag = () => {
     const t = tagInput.trim();
-    if (t && !tags.includes(t)) {
-      const next = [...tags, t];
-      setTags(next);
+    if (t && !tagsW.includes(t)) {
+      const next = [...tagsW, t];
       setValue("tags", next, { shouldDirty: true });
     }
     setTagInput("");
   };
 
   const removeTag = (tag: string) => {
-    const next = tags.filter((t) => t !== tag);
-    setTags(next);
+    const next = tagsW.filter((x) => x !== tag);
     setValue("tags", next, { shouldDirty: true });
   };
 
   const onSubmit = (values: ProductFormValues) => {
-    updateMutation.mutate(
-      {
-        id: productId,
-        data: {
-          name: values.name,
-          description: values.description,
-          price: Number(values.price),
-          discount: values.discount ? Number(values.discount) : undefined,
-          categoryId: values.categoryId,
-          ageRange: values.ageRange || undefined,
-          tags: values.tags,
-          stock: Number(values.stock),
-        },
-      },
-      {
-        onSuccess: () => {
-          router.push("/dashboard/products");
-        },
-      }
+    if (!variants.length) {
+      toast.error("Add at least one variant (age range) in Variants & stock below.");
+      return;
+    }
+    const preservedSizeTags = (product?.tags ?? []).filter(
+      (t): t is string => typeof t === "string" && t.startsWith("SIZE:")
     );
+    updateMutation.mutate({
+      id: productId,
+      data: {
+        name: values.name,
+        description: values.description,
+        price: Number(values.price),
+        discount:
+          values.discount != null && !Number.isNaN(Number(values.discount))
+            ? Number(values.discount)
+            : undefined,
+        categoryId: values.categoryId,
+        gender: values.gender,
+        tags: [...(values.tags ?? []), ...preservedSizeTags],
+      },
+    });
   };
+
+  const saveStockLevels = () => {
+    const adjustments = variants
+      .map((v) => {
+        const next = Math.max(0, Math.floor(stockDraft[v.id] ?? v.stock));
+        const delta = next - v.stock;
+        return {
+          variantId: v.id,
+          add: Math.max(0, delta),
+          remove: Math.max(0, -delta),
+        };
+      })
+      .filter((a) => a.add > 0 || a.remove > 0);
+    if (adjustments.length === 0) {
+      toast.message("No stock changes to save");
+      return;
+    }
+    adjustStockMutation.mutate({ productId, body: { adjustments } });
+  };
+
+  const takenAgeRanges = new Set(variants.map((v) => v.ageRange));
+  const addableAgeRanges = AGE_RANGES.filter((ar) => !takenAgeRanges.has(ar.value));
 
   const handleDelete = () => {
     deleteMutation.mutate(productId, {
@@ -172,7 +236,25 @@ export default function EditProductPage() {
     );
   }
 
-  const primaryImage = product.images?.find((i) => i.isPrimary) ?? product.images?.[0];
+  const sortedImages = [...(product.images ?? [])].sort((a, b) => a.order - b.order);
+  const imageBusy =
+    addImageMutation.isPending ||
+    deleteImageMutation.isPending ||
+    setPrimaryMutation.isPending;
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const maxOrder = sortedImages.reduce((m, i) => Math.max(m, i.order), -1);
+    addImageMutation.mutate({
+      productId,
+      file,
+      isPrimary: sortedImages.length === 0,
+      order: maxOrder + 1,
+      altText: file.name,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -249,20 +331,39 @@ export default function EditProductPage() {
               </CardContent>
             </Card>
 
-            {/* Current Images (read-only display) */}
+            {/* Images — matches backend POST/DELETE/PATCH /products/:id/images */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5" /> Current Images
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ImageIcon className="h-5 w-5" /> Product images
                 </CardTitle>
+                <div>
+                  <input
+                    ref={imageFileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleImageFileChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={imageBusy}
+                    onClick={() => imageFileRef.current?.click()}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Add image
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                {product.images && product.images.length > 0 ? (
+                {sortedImages.length > 0 ? (
                   <div className="flex flex-wrap gap-3">
-                    {product.images.map((img) => (
+                    {sortedImages.map((img) => (
                       <div
                         key={img.id}
-                        className="relative h-24 w-24 overflow-hidden rounded-lg border"
+                        className="relative h-28 w-28 overflow-hidden rounded-lg border"
                       >
                         <Image
                           src={img.url}
@@ -275,13 +376,203 @@ export default function EditProductPage() {
                             Primary
                           </span>
                         )}
+                        <div className="absolute right-0 bottom-0 left-0 flex gap-0.5 bg-black/50 p-0.5">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="secondary"
+                            className="h-7 w-7 shrink-0"
+                            disabled={imageBusy || img.isPrimary}
+                            title="Set as primary"
+                            onClick={() =>
+                              setPrimaryMutation.mutate({
+                                productId,
+                                imageId: img.id,
+                              })
+                            }
+                          >
+                            <Star className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="destructive"
+                            className="h-7 w-7 shrink-0"
+                            disabled={imageBusy}
+                            title="Delete image"
+                            onClick={() => {
+                              if (!window.confirm("Remove this image?")) return;
+                              deleteImageMutation.mutate({
+                                productId,
+                                imageId: img.id,
+                              });
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="text-muted-foreground py-6 text-center text-sm">
-                    No images uploaded yet.
+                    No images yet. Use &ldquo;Add image&rdquo; to upload.
                   </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Variants — GET/POST/PATCH/DELETE /variants, PATCH /variants/stock/adjust */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Variants &amp; stock</CardTitle>
+                <p className="text-muted-foreground text-xs">
+                  Each age range is a variant. Stock is adjusted via the inventory API
+                  (not the product PATCH).
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loadingVariants ? (
+                  <p className="text-muted-foreground text-sm">Loading variants…</p>
+                ) : variants.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">
+                    No variants yet. Add an age range to create sellable inventory.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {variants.map((v) => {
+                      const label =
+                        AGE_RANGES.find((a) => a.value === v.ageRange)?.label ??
+                        v.ageRange;
+                      return (
+                        <div
+                          key={v.id}
+                          className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:flex-wrap sm:items-end"
+                        >
+                          <div className="min-w-[140px] flex-1 space-y-1">
+                            <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                              Age
+                            </p>
+                            <p className="text-sm font-medium">{label}</p>
+                            <p className="text-muted-foreground font-mono text-xs">
+                              {v.sku}
+                            </p>
+                          </div>
+                          <div className="w-28 space-y-1">
+                            <Label className="text-[10px] uppercase">Stock</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={stockDraft[v.id] ?? v.stock}
+                              onChange={(e) =>
+                                setStockDraft((prev) => ({
+                                  ...prev,
+                                  [v.id]: Number(e.target.value),
+                                }))
+                              }
+                            />
+                          </div>
+                          <div className="w-28 space-y-1">
+                            <Label className="text-[10px] uppercase">Reorder at</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              defaultValue={v.reorderLevel}
+                              key={`reorder-${v.id}-${v.reorderLevel}`}
+                              onBlur={(e) => {
+                                const n = Math.max(0, Math.floor(Number(e.target.value)));
+                                if (n !== v.reorderLevel) {
+                                  updateVariantMutation.mutate({
+                                    id: v.id,
+                                    productId,
+                                    body: { reorderLevel: n },
+                                  });
+                                }
+                              }}
+                            />
+                          </div>
+                          <label className="flex cursor-pointer items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={v.isActive}
+                              onCheckedChange={(on) => {
+                                updateVariantMutation.mutate({
+                                  id: v.id,
+                                  productId,
+                                  body: { isActive: on === true },
+                                });
+                              }}
+                            />
+                            Active
+                          </label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                            disabled={deleteVariantMutation.isPending}
+                            onClick={() => {
+                              if (!window.confirm(`Remove variant (${label})?`)) return;
+                              deleteVariantMutation.mutate({ id: v.id, productId });
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      );
+                    })}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={adjustStockMutation.isPending}
+                      onClick={saveStockLevels}
+                    >
+                      Save stock levels
+                    </Button>
+                  </div>
+                )}
+
+                {addableAgeRanges.length > 0 && (
+                  <div className="flex flex-wrap items-end gap-2 border-t pt-4">
+                    <div className="min-w-[200px] flex-1 space-y-1">
+                      <Label className="text-xs">Add variant (age range)</Label>
+                      <Select
+                        value={newVariantAge || undefined}
+                        onValueChange={(v) => setNewVariantAge(v ?? "")}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose age range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {addableAgeRanges.map((ar) => (
+                            <SelectItem key={ar.value} value={ar.value}>
+                              {ar.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!newVariantAge || createVariantMutation.isPending}
+                      onClick={() => {
+                        if (!newVariantAge) return;
+                        createVariantMutation.mutate(
+                          {
+                            productId,
+                            ageRange: newVariantAge,
+                            stock: 0,
+                            reorderLevel: 10,
+                            isActive: true,
+                          },
+                          { onSuccess: () => setNewVariantAge("") }
+                        );
+                      }}
+                    >
+                      Add variant
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -332,24 +623,18 @@ export default function EditProductPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Inventory</CardTitle>
+                  <CardTitle>Inventory summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold tracking-wider uppercase">
-                      Stock Quantity
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground text-xs uppercase">
+                      Total stock (all variants)
                     </Label>
-                    <Input
-                      type="number"
-                      placeholder="100"
-                      {...register("stock", {
-                        required: "Stock is required",
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {errors.stock && (
-                      <p className="text-destructive text-xs">{errors.stock.message}</p>
-                    )}
+                    <p className="text-2xl font-semibold">{totalVariantStock(product)}</p>
+                    <p className="text-muted-foreground text-xs">
+                      Edit quantities in &ldquo;Variants &amp; stock&rdquo; above, then
+                      use &ldquo;Save stock levels&rdquo;.
+                    </p>
                   </div>
                   <div className="bg-muted/60 rounded-lg p-3">
                     <div className="flex items-center justify-between text-sm">
@@ -425,7 +710,7 @@ export default function EditProductPage() {
                     <p className="text-muted-foreground text-xs">Loading...</p>
                   ) : (
                     <Select
-                      value={watch("categoryId")}
+                      value={categoryIdW}
                       onValueChange={(val) =>
                         val && setValue("categoryId", val, { shouldDirty: true })
                       }
@@ -444,22 +729,21 @@ export default function EditProductPage() {
                   )}
                 </div>
 
-                {/* Age Range */}
                 <div className="space-y-2">
-                  <Label className="text-xs">Age Range</Label>
+                  <Label className="text-xs">Gender</Label>
                   <Select
-                    value={watch("ageRange") ?? ""}
+                    value={genderW}
                     onValueChange={(val) =>
-                      val && setValue("ageRange", val, { shouldDirty: true })
+                      val && setValue("gender", val, { shouldDirty: true })
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select age range" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {AGE_RANGES.map((ar) => (
-                        <SelectItem key={ar.value} value={ar.value}>
-                          {ar.label}
+                      {PRODUCT_GENDER_API.map((g) => (
+                        <SelectItem key={g.value} value={g.value}>
+                          {g.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -485,9 +769,9 @@ export default function EditProductPage() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  {tags.length > 0 && (
+                  {tagsW.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
-                      {tags.map((tag) => (
+                      {tagsW.map((tag) => (
                         <Badge key={tag} variant="secondary" className="gap-1">
                           {tag}
                           <button

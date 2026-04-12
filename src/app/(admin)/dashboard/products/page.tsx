@@ -21,7 +21,7 @@ import {
 import { useCategories } from "@/hooks/use-categories";
 import { useDeleteProduct, useProducts, useUpdateProduct } from "@/hooks/use-products";
 import { cn } from "@/lib/utils";
-import type { BackendProduct } from "@/services/products";
+import { totalVariantStock, type BackendProduct } from "@/services/products";
 import {
   AlertTriangle,
   ChevronLeft,
@@ -47,9 +47,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 export default function ProductManagementPage() {
   const [page, setPage] = useState(1);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"createdAt" | "price" | "rating">("createdAt");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [statusFilter, setStatusFilter] = useState<"active" | "inactive">("active");
+  const [sortBy, setSortBy] = useState<"createdAt" | "price" | "name">("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<BackendProduct | null>(null);
 
@@ -60,10 +60,9 @@ export default function ProductManagementPage() {
     page,
     limit: 10,
     sortBy,
-    sortDir,
+    sortOrder,
     ...(categoryFilter !== "all" ? { categoryId: categoryFilter } : {}),
-    ...(statusFilter === "active" ? { inStock: true } : {}),
-    ...(statusFilter === "inactive" ? { inStock: false } : {}),
+    ...(statusFilter === "inactive" ? { isActive: false } : {}),
   });
 
   const products = data?.data ?? [];
@@ -103,16 +102,19 @@ export default function ProductManagementPage() {
     if (!val) return;
     if (val === "newest") {
       setSortBy("createdAt");
-      setSortDir("desc");
+      setSortOrder("desc");
     } else if (val === "price_asc") {
       setSortBy("price");
-      setSortDir("asc");
+      setSortOrder("asc");
     } else if (val === "price_desc") {
       setSortBy("price");
-      setSortDir("desc");
-    } else if (val === "rating") {
-      setSortBy("rating");
-      setSortDir("desc");
+      setSortOrder("desc");
+    } else if (val === "name_asc") {
+      setSortBy("name");
+      setSortOrder("asc");
+    } else if (val === "name_desc") {
+      setSortBy("name");
+      setSortOrder("desc");
     }
   };
 
@@ -123,7 +125,7 @@ export default function ProductManagementPage() {
   };
 
   const getCategorySlug = (product: BackendProduct) => {
-    if (product.category) return product.category.slug;
+    if (product.category?.slug) return product.category.slug;
     const cat = categories.find((c) => c.id === product.categoryId);
     return cat?.slug ?? "";
   };
@@ -213,9 +215,8 @@ export default function ProductManagementPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="active">Active listings</SelectItem>
+              <SelectItem value="inactive">Inactive / hidden</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -226,13 +227,17 @@ export default function ProductManagementPage() {
           </span>
           <Select
             value={
-              sortBy === "createdAt" && sortDir === "desc"
+              sortBy === "createdAt" && sortOrder === "desc"
                 ? "newest"
-                : sortBy === "price" && sortDir === "asc"
+                : sortBy === "price" && sortOrder === "asc"
                   ? "price_asc"
                   : sortBy === "price"
                     ? "price_desc"
-                    : "rating"
+                    : sortBy === "name" && sortOrder === "asc"
+                      ? "name_asc"
+                      : sortBy === "name"
+                        ? "name_desc"
+                        : "newest"
             }
             onValueChange={handleSort}
           >
@@ -243,7 +248,8 @@ export default function ProductManagementPage() {
               <SelectItem value="newest">Newest First</SelectItem>
               <SelectItem value="price_asc">Price: Low → High</SelectItem>
               <SelectItem value="price_desc">Price: High → Low</SelectItem>
-              <SelectItem value="rating">Top Rated</SelectItem>
+              <SelectItem value="name_asc">Name: A → Z</SelectItem>
+              <SelectItem value="name_desc">Name: Z → A</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -294,8 +300,15 @@ export default function ProductManagementPage() {
           products.map((product) => {
             const imgUrl = getPrimaryImage(product);
             const catLabel = getCategoryLabel(product);
-            const catSlug = getCategorySlug(product);
-            const lowStock = product.stock > 0 && product.stock <= 5;
+            const catSlug = getCategorySlug(product) ?? "";
+            const stockTotal = totalVariantStock(product);
+            const lowStock = stockTotal > 0 && stockTotal <= 5;
+            const primarySku =
+              product.variants?.length === 1
+                ? (product.variants[0]?.sku ?? "—")
+                : product.variants && product.variants.length > 1
+                  ? "Multiple"
+                  : "—";
 
             return (
               <div
@@ -327,8 +340,8 @@ export default function ProductManagementPage() {
                     </p>
                   </div>
                 </div>
-                <span className="text-muted-foreground text-xs">
-                  {product.id.slice(0, 10)}
+                <span className="text-muted-foreground text-xs" title={primarySku}>
+                  {primarySku}
                 </span>
                 <Badge
                   variant="secondary"
@@ -341,11 +354,11 @@ export default function ProductManagementPage() {
                 </Badge>
                 <span className="text-sm font-medium">৳{product.price.toFixed(2)}</span>
                 <div>
-                  <span className="text-sm">{product.stock}</span>
+                  <span className="text-sm">{stockTotal}</span>
                   {lowStock && (
                     <p className="text-[10px] font-semibold text-red-500">Low Stock</p>
                   )}
-                  {product.stock === 0 && (
+                  {stockTotal === 0 && (
                     <p className="text-[10px] font-semibold text-red-500">Out of Stock</p>
                   )}
                 </div>

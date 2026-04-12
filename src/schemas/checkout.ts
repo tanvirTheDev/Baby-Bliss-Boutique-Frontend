@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const checkoutSchema = z.object({
+  shippingAddressId: z.string().optional(),
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Please enter a valid email"),
   phoneNumber: z
@@ -17,9 +18,6 @@ export const checkoutSchema = z.object({
     .trim()
     .regex(/^\d{4}$/, "Zip must be 4 digits")
     .optional(),
-  paymentMethod: z.enum(["credit_card", "paypal"], {
-    message: "Please select a payment method",
-  }),
 });
 
 export type CheckoutFormValues = z.infer<typeof checkoutSchema>;

@@ -1,30 +1,31 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { checkoutSchema, type CheckoutFormValues } from "@/schemas/checkout";
+import type { ShippingAddress } from "@/services/shipping-addresses";
 
 interface CheckoutFormProps {
   onSubmit: (values: CheckoutFormValues) => void;
   isLoading?: boolean;
+  addresses?: ShippingAddress[];
 }
 
-export function CheckoutForm({ onSubmit, isLoading }: CheckoutFormProps) {
+export function CheckoutForm({ onSubmit, isLoading, addresses = [] }: CheckoutFormProps) {
   const {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
+      shippingAddressId: "",
       fullName: "",
       email: "",
       phoneNumber: "",
@@ -34,12 +35,47 @@ export function CheckoutForm({ onSubmit, isLoading }: CheckoutFormProps) {
       area: "",
       street: "",
       zip: "",
-      paymentMethod: "credit_card",
     },
   });
 
+  const shippingAddressIdW = useWatch({ control, name: "shippingAddressId" }) ?? "";
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Saved addresses */}
+      {addresses.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <span className="bg-brand-gold flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white">
+                0
+              </span>
+              Use a saved address (optional)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Label className="text-xs font-medium">Saved shipping address</Label>
+            <select
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              value={shippingAddressIdW}
+              onChange={(e) => setValue("shippingAddressId", e.target.value)}
+              disabled={isLoading}
+            >
+              <option value="">Create a new address below</option>
+              {addresses.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.fullName} · {a.phoneNumber} · {a.street}, {a.upazila}, {a.district}
+                </option>
+              ))}
+            </select>
+            <p className="text-muted-foreground text-xs">
+              If you select a saved address, the form below will still submit but we’ll
+              use the saved one for the order.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Contact Information */}
       <Card>
         <CardHeader>
@@ -141,55 +177,6 @@ export function CheckoutForm({ onSubmit, isLoading }: CheckoutFormProps) {
               <p className="text-destructive text-xs">{errors.zip.message}</p>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Payment Method */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3">
-            <span className="bg-brand-gold flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white">
-              3
-            </span>
-            Payment Method
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={watch("paymentMethod")}
-            onValueChange={(val) =>
-              setValue("paymentMethod", val as "credit_card" | "paypal")
-            }
-            className="space-y-3"
-          >
-            <label className="hover:bg-muted/50 has-data-[state=checked]:border-primary flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors">
-              <RadioGroupItem value="credit_card" />
-              <CreditCard className="text-muted-foreground h-5 w-5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Credit or Debit Card</p>
-                <p className="text-muted-foreground text-xs">
-                  Securely pay with your Visa, Mastercard, or Amex
-                </p>
-              </div>
-            </label>
-            <label className="hover:bg-muted/50 has-data-[state=checked]:border-primary flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors">
-              <RadioGroupItem value="paypal" />
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M7.076 21.337H2.47a.641.641 0 01-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106z" />
-              </svg>
-              <div className="flex-1">
-                <p className="text-sm font-medium">PayPal</p>
-                <p className="text-muted-foreground text-xs">
-                  Redirect to PayPal to complete purchase
-                </p>
-              </div>
-            </label>
-          </RadioGroup>
-          {errors.paymentMethod && (
-            <p className="text-destructive mt-2 text-xs">
-              {errors.paymentMethod.message}
-            </p>
-          )}
         </CardContent>
       </Card>
 

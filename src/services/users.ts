@@ -61,15 +61,6 @@ export interface UpdateMeResponse {
   data: BackendUser;
 }
 
-/** Admin-only: create customer account (password required). */
-export interface AdminCreateUserInput {
-  fullName: string;
-  email: string;
-  password: string;
-  phoneNumber?: string;
-  avatar?: string;
-}
-
 export const userService = {
   list(params?: ListUsersParams) {
     const q: Record<string, string> = {};
@@ -95,10 +86,6 @@ export const userService = {
 
   updateById(id: string, data: AdminUpdateUserInput) {
     return api.patch<SingleUserResponse>(`/users/${id}`, data);
-  },
-
-  create(data: AdminCreateUserInput) {
-    return api.post<SingleUserResponse>("/users", data);
   },
 
   setUserActive(userId: string, isActive: boolean) {

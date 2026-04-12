@@ -47,9 +47,13 @@ class ApiClient {
     return response.json();
   }
 
-  async get<T>(endpoint: string, params?: Record<string, string>) {
-    const query = params ? `?${new URLSearchParams(params).toString()}` : "";
-    return this.request<T>(`${endpoint}${query}`);
+  async get<T>(endpoint: string, params?: Record<string, string> | URLSearchParams) {
+    if (!params) return this.request<T>(endpoint);
+    const qs =
+      params instanceof URLSearchParams
+        ? params.toString()
+        : new URLSearchParams(params).toString();
+    return this.request<T>(`${endpoint}?${qs}`);
   }
 
   async post<T>(endpoint: string, body?: unknown) {

@@ -2,13 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
   Eye,
   Loader2,
   Mail,
   Pencil,
   Phone,
-  Plus,
   Search,
   Shield,
   UserRound,
@@ -38,7 +36,6 @@ import { Pagination } from "@/components/ecommerce/pagination";
 import {
   useUsers,
   useUser,
-  useAdminCreateUser,
   useAdminUpdateUser,
   useToggleUserActive,
 } from "@/hooks/use-users";
@@ -46,7 +43,7 @@ import { useUserShippingAddresses } from "@/hooks/use-shipping-addresses";
 import type { BackendUser } from "@/services/users";
 import { cn } from "@/lib/utils";
 
-type ModalMode = "view" | "edit" | "create" | null;
+type ModalMode = "view" | "edit" | null;
 
 export default function CustomersAdminPage() {
   const [page, setPage] = useState(1);
@@ -91,12 +88,6 @@ export default function CustomersAdminPage() {
   const [editPhone, setEditPhone] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
 
-  const [createFullName, setCreateFullName] = useState("");
-  const [createEmail, setCreateEmail] = useState("");
-  const [createPassword, setCreatePassword] = useState("");
-  const [createPhone, setCreatePhone] = useState("");
-
-  const createMutation = useAdminCreateUser();
   const updateMutation = useAdminUpdateUser();
   const toggleMutation = useToggleUserActive();
 
@@ -114,47 +105,23 @@ export default function CustomersAdminPage() {
     setModalMode("edit");
   };
 
-  const openCreate = () => {
-    setCreateFullName("");
-    setCreateEmail("");
-    setCreatePassword("");
-    setCreatePhone("");
-    setModalMode("create");
-  };
-
   const closeModal = () => {
     setModalMode(null);
     setActiveId(null);
   };
 
   const handleSaveEdit = () => {
-    if (!activeId || !editFullName.trim() || !editEmail.trim()) return;
+    if (!activeId || !editFullName.trim()) return;
     const payload: {
       fullName: string;
-      email: string;
       phoneNumber?: string;
       avatar?: string;
     } = {
       fullName: editFullName.trim(),
-      email: editEmail.trim(),
     };
     if (editPhone.trim()) payload.phoneNumber = editPhone.trim();
     if (editAvatar.trim()) payload.avatar = editAvatar.trim();
     updateMutation.mutate({ id: activeId, data: payload }, { onSuccess: closeModal });
-  };
-
-  const handleCreate = () => {
-    if (!createFullName.trim() || !createEmail.trim() || createPassword.length < 6)
-      return;
-    createMutation.mutate(
-      {
-        fullName: createFullName.trim(),
-        email: createEmail.trim(),
-        password: createPassword,
-        ...(createPhone.trim() ? { phoneNumber: createPhone.trim() } : {}),
-      },
-      { onSuccess: closeModal }
-    );
   };
 
   const toggleActive = (u: BackendUser) => {
@@ -163,24 +130,15 @@ export default function CustomersAdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-muted-foreground text-xs tracking-wider uppercase">
-            Dashboard / Customers
-          </p>
-          <h1 className="font-heading text-3xl font-bold">Customers</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Search accounts, open profiles, edit details, activate or deactivate, and
-            register new customers.
-          </p>
-        </div>
-        <Button
-          className="bg-brand-gold hover:bg-brand-gold-dark text-white"
-          onClick={openCreate}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          New customer
-        </Button>
+      <div>
+        <p className="text-muted-foreground text-xs tracking-wider uppercase">
+          Dashboard / Customers
+        </p>
+        <h1 className="font-heading text-3xl font-bold">Customers</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Search accounts, open profiles, edit details, and activate or deactivate. New
+          accounts are created via storefront registration.
+        </p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -490,8 +448,12 @@ export default function CustomersAdminPage() {
               <Input
                 type="email"
                 value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
+                disabled
+                className="bg-muted cursor-not-allowed"
               />
+              <p className="text-muted-foreground text-xs">
+                Email cannot be changed from the admin panel.
+              </p>
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase">Phone (optional)</Label>
@@ -517,87 +479,9 @@ export default function CustomersAdminPage() {
             <Button
               className="bg-brand-gold hover:bg-brand-gold-dark text-white"
               onClick={handleSaveEdit}
-              disabled={
-                updateMutation.isPending || !editFullName.trim() || !editEmail.trim()
-              }
+              disabled={updateMutation.isPending || !editFullName.trim()}
             >
               {updateMutation.isPending ? "Saving…" : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={modalMode === "create"}
-        onOpenChange={(o) => {
-          if (!o) closeModal();
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>New customer</DialogTitle>
-            <DialogDescription>
-              Creates a CUSTOMER account with the password you set. They can sign in
-              immediately.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="bg-muted/50 flex gap-2 rounded-md border p-3 text-xs">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-              <p>
-                Phone must match backend rules: digits only, optional leading +, 7–15
-                digits (e.g. +8801712345678).
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs uppercase">Full name</Label>
-              <Input
-                value={createFullName}
-                onChange={(e) => setCreateFullName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs uppercase">Email</Label>
-              <Input
-                type="email"
-                value={createEmail}
-                onChange={(e) => setCreateEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs uppercase">Password</Label>
-              <Input
-                type="password"
-                autoComplete="new-password"
-                value={createPassword}
-                onChange={(e) => setCreatePassword(e.target.value)}
-                placeholder="At least 6 characters"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs uppercase">Phone (optional)</Label>
-              <Input
-                placeholder="+8801XXXXXXXXX"
-                value={createPhone}
-                onChange={(e) => setCreatePhone(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-brand-gold hover:bg-brand-gold-dark text-white"
-              onClick={handleCreate}
-              disabled={
-                createMutation.isPending ||
-                !createFullName.trim() ||
-                !createEmail.trim() ||
-                createPassword.length < 6
-              }
-            >
-              {createMutation.isPending ? "Creating…" : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -10,10 +10,15 @@ import { useCartStore } from "@/stores/cart-store";
 import { toast } from "sonner";
 import { useCreateShippingAddress } from "@/hooks/use-shipping-addresses";
 import { useCreateOrder } from "@/hooks/use-orders";
+import { useMe } from "@/hooks/use-users";
+import { useUserShippingAddresses } from "@/hooks/use-shipping-addresses";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, appliedCoupon, clearCart } = useCartStore();
+  const { data: me } = useMe();
+  const userId = me?.id ?? "";
+  const { data: addresses = [] } = useUserShippingAddresses(userId);
   const createAddress = useCreateShippingAddress();
   const createOrder = useCreateOrder();
 
@@ -25,29 +30,33 @@ export default function CheckoutPage() {
     }
 
     try {
-      const addressRes = await createAddress.mutateAsync({
-        fullName: values.fullName,
-        phoneNumber: values.phoneNumber,
-        division: values.division,
-        district: values.district,
-        upazila: values.upazila,
-        area: values.area || undefined,
-        street: values.street,
-        zip: values.zip || undefined,
-        isDefault: true,
-      });
+      const shippingAddressId =
+        values.shippingAddressId && values.shippingAddressId.length > 0
+          ? values.shippingAddressId
+          : (
+              await createAddress.mutateAsync({
+                fullName: values.fullName,
+                phoneNumber: values.phoneNumber,
+                division: values.division,
+                district: values.district,
+                upazila: values.upazila,
+                area: values.area || undefined,
+                street: values.street,
+                zip: values.zip || undefined,
+                isDefault: true,
+              })
+            ).data.id;
 
-      const shippingAddressId = addressRes.data.id;
-
-      await createOrder.mutateAsync({
+      const orderRes = await createOrder.mutateAsync({
         shippingAddressId,
         items: items.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
-        notes: `PaymentMethod=${values.paymentMethod}; ContactEmail=${values.email}`,
+        couponCode: appliedCoupon?.code ?? undefined,
+        notes: `ContactEmail=${values.email}`,
       });
 
       clearCart();
-      toast.success("Order placed successfully");
-      router.push("/");
+      toast.success("Order placed successfully. Continue to payment.");
+      router.push(`/payment/${orderRes.data.id}`);
     } catch (e) {
       // hooks already toast, keep fallback
       const err = e as { message?: string };
@@ -76,6 +85,7 @@ export default function CheckoutPage() {
         <CheckoutForm
           onSubmit={handleSubmit}
           isLoading={createAddress.isPending || createOrder.isPending}
+          addresses={addresses}
         />
         <div className="space-y-4">
           <OrderSummary showCheckoutButton={false} showDiscountCode={true} />

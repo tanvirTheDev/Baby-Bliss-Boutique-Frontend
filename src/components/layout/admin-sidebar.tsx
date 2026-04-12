@@ -14,6 +14,7 @@ import {
   Plus,
   FolderTree,
   TicketPercent,
+  Warehouse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -30,6 +31,7 @@ const iconMap = {
   Users,
   BarChart3,
   Settings,
+  Warehouse,
 } as const;
 
 interface NavItem {
@@ -41,6 +43,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
   { label: "Inventory", href: "/dashboard/products", icon: "Package" },
+  { label: "Stock", href: "/dashboard/stock", icon: "Warehouse" },
   { label: "Categories", href: "/dashboard/categories", icon: "FolderTree" },
   { label: "Coupons", href: "/dashboard/coupons", icon: "TicketPercent" },
   { label: "Orders", href: "/dashboard/orders", icon: "ShoppingBag" },

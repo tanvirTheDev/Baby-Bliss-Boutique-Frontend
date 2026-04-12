@@ -13,6 +13,15 @@ import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
 import { backendProductToProduct, DEFAULT_CART_COLOR } from "@/lib/product-adapter";
 import { formatBDT } from "@/lib/currency";
+import { AGE_RANGES } from "@/config/constants";
+
+function ageRangeBadgeLabel(ageRanges: string[] | undefined): string | null {
+  if (!ageRanges?.length) return null;
+  const first = AGE_RANGES.find((a) => a.value === ageRanges[0]);
+  const base = first?.label ?? ageRanges[0].replace(/_/g, " ");
+  if (ageRanges.length === 1) return base;
+  return `${base} +${ageRanges.length - 1}`;
+}
 
 interface StorefrontProductCardProps {
   product: BackendProduct;
@@ -30,6 +39,7 @@ export function StorefrontProductCard({
   const salePrice = hasDiscount
     ? product.price - (product.price * product.discount!) / 100
     : null;
+  const ageBadge = ageRangeBadgeLabel(product.ageRange);
 
   return (
     <Card
@@ -69,10 +79,10 @@ export function StorefrontProductCard({
             )}
           </div>
 
-          {product.ageRange && (
+          {ageBadge && (
             <div className="absolute right-2 bottom-2">
               <span className="text-foreground rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium">
-                {product.ageRange.replace(/_/g, " ")}
+                {ageBadge}
               </span>
             </div>
           )}

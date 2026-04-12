@@ -2,7 +2,7 @@ import { api } from "./api";
 
 export type OrderStatus = "PENDING" | "CONFIRMED" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 
-export type PaymentStatus = "PAID" | "UNPAID";
+export type PaymentStatus = "UNPAID" | "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
 export interface OrderUser {
   id: string;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<RegisterFormValues>({
@@ -59,7 +59,8 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
     },
   });
 
-  const password = watch("password");
+  const password = useWatch({ control, name: "password" }) ?? "";
+  const agreeToTerms = useWatch({ control, name: "agreeToTerms" });
   const strength = getPasswordStrength(password);
 
   return (
@@ -209,7 +210,7 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
         <div className="flex items-start space-x-2">
           <Checkbox
             id="terms"
-            checked={watch("agreeToTerms") === true}
+            checked={agreeToTerms === true}
             onCheckedChange={(checked) =>
               setValue(
                 "agreeToTerms",

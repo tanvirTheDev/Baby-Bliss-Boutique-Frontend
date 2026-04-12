@@ -6,7 +6,7 @@ export const createProductSchema = z.object({
   price: z.coerce.number().positive("Price must be greater than 0"),
   discount: z.coerce.number().min(0).max(100).optional(),
   categoryId: z.string().min(1, "Category is required"),
-  ageRange: z.string().optional(),
+  ageRanges: z.array(z.string()).min(1, "Select at least one age range"),
   tags: z.array(z.string()).default([]),
   stock: z.coerce.number().int().min(0, "Stock cannot be negative"),
 });

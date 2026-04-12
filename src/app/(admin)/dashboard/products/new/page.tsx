@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { ArrowLeft, Upload, X, Plus, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCreateProduct } from "@/hooks/use-products";
+import { toast } from "sonner";
 import { useCategories } from "@/hooks/use-categories";
-import { AGE_RANGES } from "@/config/constants";
+import { AGE_RANGES, PRODUCT_GENDER_API } from "@/config/constants";
 
 interface ProductFormValues {
   name: string;
@@ -29,7 +31,8 @@ interface ProductFormValues {
   price: number;
   discount?: number;
   categoryId: string;
-  ageRange?: string;
+  gender: string;
+  ageRanges: string[];
   tags: string[];
   stock: number;
 }
@@ -53,7 +56,7 @@ export default function AddProductPage() {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<ProductFormValues>({
     defaultValues: {
@@ -62,29 +65,39 @@ export default function AddProductPage() {
       price: 0,
       discount: undefined,
       categoryId: "",
-      ageRange: undefined,
+      gender: "UNISEX",
+      ageRanges: [],
       tags: [],
       stock: 0,
     },
   });
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files).filter((f) =>
-      ["image/jpeg", "image/png", "image/webp"].includes(f.type)
-    );
-    addFiles(files);
+  const categoryIdW = useWatch({ control, name: "categoryId" });
+  const genderW = useWatch({ control, name: "gender" });
+  const ageRangesW = useWatch({ control, name: "ageRanges" }) ?? [];
+
+  const addFiles = useCallback((files: File[]) => {
+    setImages((prev) => {
+      const remaining = 5 - prev.length;
+      const toAdd = files.slice(0, remaining);
+      const previews = toAdd.map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+      }));
+      return [...prev, ...previews];
+    });
   }, []);
 
-  const addFiles = (files: File[]) => {
-    const remaining = 5 - images.length;
-    const toAdd = files.slice(0, remaining);
-    const previews = toAdd.map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-    }));
-    setImages((prev) => [...prev, ...previews]);
-  };
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const files = Array.from(e.dataTransfer.files).filter((f) =>
+        ["image/jpeg", "image/png", "image/webp"].includes(f.type)
+      );
+      addFiles(files);
+    },
+    [addFiles]
+  );
 
   const removeImage = (index: number) => {
     setImages((prev) => {
@@ -111,18 +124,28 @@ export default function AddProductPage() {
   };
 
   const onSubmit = (values: ProductFormValues) => {
+    if (!values.ageRanges?.length) {
+      toast.error("Select at least one age range.");
+      return;
+    }
     const formData = new FormData();
     formData.append("name", values.name);
     formData.append("description", values.description);
-    formData.append("price", String(values.price));
-    if (values.discount !== undefined) {
-      formData.append("discount", String(values.discount));
+    formData.append("price", String(Number(values.price)));
+    if (values.discount != null && !Number.isNaN(Number(values.discount))) {
+      formData.append("discount", String(Number(values.discount)));
     }
     formData.append("categoryId", values.categoryId);
-    if (values.ageRange) {
-      formData.append("ageRange", values.ageRange);
-    }
-    formData.append("stock", String(values.stock));
+    formData.append("gender", values.gender || "UNISEX");
+
+    const stockNum = Math.max(0, Math.floor(Number(values.stock) || 0));
+    const variants = values.ageRanges.map((ageRange) => ({
+      ageRange,
+      stock: stockNum,
+      reorderLevel: 10,
+      isActive: true,
+    }));
+    formData.append("variants", JSON.stringify(variants));
 
     values.tags?.forEach((tag) => {
       formData.append("tags", tag);
@@ -397,7 +420,7 @@ export default function AddProductPage() {
                     <p className="text-muted-foreground text-xs">Loading...</p>
                   ) : (
                     <Select
-                      value={watch("categoryId")}
+                      value={categoryIdW}
                       onValueChange={(val) =>
                         val && setValue("categoryId", val, { shouldValidate: true })
                       }
@@ -421,24 +444,57 @@ export default function AddProductPage() {
                   )}
                 </div>
 
-                {/* Age Range */}
                 <div className="space-y-2">
-                  <Label className="text-xs">Age Range</Label>
+                  <Label className="text-xs">Gender</Label>
                   <Select
-                    value={watch("ageRange") ?? ""}
-                    onValueChange={(val) => val && setValue("ageRange", val)}
+                    value={genderW}
+                    onValueChange={(val) =>
+                      val && setValue("gender", val, { shouldValidate: true })
+                    }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select age range" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {AGE_RANGES.map((ar) => (
-                        <SelectItem key={ar.value} value={ar.value}>
-                          {ar.label}
+                      {PRODUCT_GENDER_API.map((g) => (
+                        <SelectItem key={g.value} value={g.value}>
+                          {g.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Age ranges (multi-select, min. 1) */}
+                <div className="space-y-2">
+                  <Label className="text-xs">Age ranges</Label>
+                  <p className="text-muted-foreground text-[11px]">
+                    Select which ages this product is suitable for. At least one is
+                    required.
+                  </p>
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
+                    {AGE_RANGES.map((ar) => {
+                      const selected = ageRangesW;
+                      const checked = selected.includes(ar.value);
+                      return (
+                        <label
+                          key={ar.value}
+                          className="flex cursor-pointer items-center gap-2 text-sm"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(on) => {
+                              const next = on
+                                ? [...selected, ar.value]
+                                : selected.filter((v) => v !== ar.value);
+                              setValue("ageRanges", next, { shouldValidate: true });
+                            }}
+                          />
+                          <span>{ar.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Tags */}

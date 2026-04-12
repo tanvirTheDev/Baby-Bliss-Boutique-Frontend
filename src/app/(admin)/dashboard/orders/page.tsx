@@ -61,6 +61,9 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
 const PAYMENT_STYLES: Record<PaymentStatus, string> = {
   PAID: "bg-emerald-50 text-emerald-800",
   UNPAID: "bg-slate-100 text-slate-700",
+  PENDING: "bg-amber-50 text-amber-800",
+  FAILED: "bg-red-50 text-red-800",
+  REFUNDED: "bg-indigo-50 text-indigo-800",
 };
 
 function snapshotLabel(s: unknown): string {

@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   userService,
-  type AdminCreateUserInput,
   type AdminUpdateUserInput,
   type ListUsersParams,
   type UpdateMeInput,
@@ -32,20 +31,6 @@ export function useUser(id: string) {
     queryKey: ["users", "detail", id],
     queryFn: () => userService.getById(id),
     enabled: !!id,
-  });
-}
-
-export function useAdminCreateUser() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: AdminCreateUserInput) => userService.create(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["users"] });
-      toast.success("Customer created");
-    },
-    onError: (err: { message?: string }) => {
-      toast.error(err.message ?? "Failed to create customer");
-    },
   });
 }
 

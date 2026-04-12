@@ -5,8 +5,18 @@ export interface ProductImage {
   id: string;
   url: string;
   altText?: string | null;
+  publicId?: string | null;
   isPrimary: boolean;
   order: number;
+}
+
+export interface BackendProductVariant {
+  id: string;
+  sku: string;
+  ageRange: string;
+  stock: number;
+  reorderLevel?: number;
+  isActive?: boolean;
 }
 
 export interface BackendProduct {
@@ -17,21 +27,25 @@ export interface BackendProduct {
   price: number;
   discount?: number | null;
   categoryId: string;
-  category?: { id: string; name: string; slug: string };
-  ageRange?: string | null;
+  gender?: string;
+  category?: { id: string; name: string; slug?: string };
+  /** Derived from variants in UI; may be absent on older payloads */
+  ageRange?: string[];
   tags: string[];
-  stock: number;
+  /** @deprecated Total stock lives on variants; use totalVariantStock() */
+  stock?: number;
   rating?: number | null;
   reviewsCount?: number | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   images: ProductImage[];
+  variants?: BackendProductVariant[];
   reviews?: unknown[];
 }
 
 export interface ProductListResponse {
-  success: boolean;
+  success?: boolean;
   message: string;
   data: BackendProduct[];
   pagination: {
@@ -49,17 +63,35 @@ export interface SingleProductResponse {
   data: BackendProduct;
 }
 
+/** Matches backend `listProductFiltersSchema` query params */
 export interface ListProductsParams {
-  categoryId?: string;
-  ageRange?: string;
-  tags?: string[];
-  minPrice?: number;
-  maxPrice?: number;
-  inStock?: boolean;
-  sortBy?: "price" | "rating" | "createdAt";
-  sortDir?: "asc" | "desc";
   page?: number;
   limit?: number;
+  search?: string;
+  categoryId?: string;
+  gender?: string;
+  tags?: string[];
+  /** Backend accepts a single age range filter */
+  ageRange?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  inStockOnly?: boolean;
+  isActive?: boolean;
+  sortBy?: "price" | "createdAt" | "name" | "rating";
+  /** Backend field name */
+  sortOrder?: "asc" | "desc";
+  /** Alias for `sortOrder` (storefront / legacy) */
+  sortDir?: "asc" | "desc";
+  /** Alias for `inStockOnly` */
+  inStock?: boolean;
+}
+
+export function totalVariantStock(product: BackendProduct): number {
+  const fromVariants = product.variants?.reduce((s, v) => s + v.stock, 0);
+  if (fromVariants !== undefined && product.variants && product.variants.length > 0) {
+    return fromVariants;
+  }
+  return product.stock ?? 0;
 }
 
 function getAuthToken(): string | null {
@@ -74,23 +106,62 @@ function getAuthToken(): string | null {
   }
 }
 
+function buildProductListQuery(filters?: ListProductsParams): URLSearchParams {
+  const sp = new URLSearchParams();
+  if (!filters) return sp;
+
+  const {
+    tags,
+    ageRange,
+    sortBy: rawSortBy,
+    sortDir,
+    sortOrder,
+    inStock,
+    inStockOnly,
+    ...rest
+  } = filters;
+
+  const sortBy = rawSortBy === "rating" ? "createdAt" : (rawSortBy ?? "createdAt");
+  const resolvedSortOrder = sortOrder ?? sortDir ?? "desc";
+  const resolvedInStock = inStockOnly ?? inStock;
+
+  Object.entries(rest).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    sp.append(key, String(value));
+  });
+
+  sp.append("sortBy", sortBy);
+  sp.append("sortOrder", resolvedSortOrder);
+
+  if (resolvedInStock !== undefined && resolvedInStock !== null) {
+    sp.append("inStockOnly", String(resolvedInStock));
+  }
+
+  tags?.forEach((t) => sp.append("tags", t));
+
+  if (ageRange !== undefined && ageRange !== null && ageRange !== "") {
+    sp.append("ageRange", ageRange);
+  }
+
+  return sp;
+}
+
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({
+      message: res.statusText || "Request failed",
+    }));
+    throw err;
+  }
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
 export const productService = {
   getAll(filters?: ListProductsParams) {
-    const params: Record<string, string> = {};
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          if (Array.isArray(value)) {
-            value.forEach((v) => {
-              params[key] = v;
-            });
-          } else {
-            params[key] = String(value);
-          }
-        }
-      });
-    }
-    return api.get<ProductListResponse>("/products", params);
+    const sp = buildProductListQuery(filters);
+    const qs = sp.toString();
+    return api.get<ProductListResponse>(qs ? `/products?${qs}` : "/products");
   },
 
   getById(id: string) {
@@ -98,7 +169,7 @@ export const productService = {
   },
 
   getRelated(id: string) {
-    return api.get<{ success: boolean; data: BackendProduct[] }>(
+    return api.get<{ success?: boolean; data: BackendProduct[] }>(
       `/products/${id}/related`
     );
   },
@@ -135,5 +206,55 @@ export const productService = {
 
   delete(id: string) {
     return api.delete<{ message: string }>(`/products/${id}`);
+  },
+
+  async addProductImage(
+    productId: string,
+    file: File,
+    options?: { altText?: string; isPrimary?: boolean; order?: number }
+  ) {
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const formData = new FormData();
+    formData.append("image", file);
+    if (options?.altText) formData.append("altText", options.altText);
+    formData.append("isPrimary", String(options?.isPrimary ?? false));
+    formData.append("order", String(options?.order ?? 0));
+
+    const res = await fetch(`${env.API_BASE_URL}/products/${productId}/images`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    return parseJsonResponse<{ message: string; data: ProductImage }>(res);
+  },
+
+  async deleteProductImage(productId: string, imageId: string) {
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await fetch(
+      `${env.API_BASE_URL}/products/${productId}/images/${imageId}`,
+      { method: "DELETE", headers }
+    );
+
+    return parseJsonResponse<{ message: string }>(res);
+  },
+
+  async setPrimaryProductImage(productId: string, imageId: string) {
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await fetch(
+      `${env.API_BASE_URL}/products/${productId}/images/${imageId}/primary`,
+      { method: "PATCH", headers }
+    );
+
+    return parseJsonResponse<{ message: string; data: ProductImage }>(res);
   },
 };

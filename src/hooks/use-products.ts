@@ -41,8 +41,13 @@ export function useCreateProduct() {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("Product created successfully");
     },
-    onError: (err: { message?: string }) => {
-      toast.error(err.message ?? "Failed to create product");
+    onError: (err: {
+      message?: string;
+      errors?: Record<string, string[] | undefined>;
+    }) => {
+      const flat = err.errors ? Object.values(err.errors).flat().filter(Boolean) : [];
+      const first = flat[0] as string | undefined;
+      toast.error(first ?? err.message ?? "Failed to create product");
     },
   });
 }
@@ -52,12 +57,18 @@ export function useUpdateProduct() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       productService.update(id, data),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product", variables.id] });
       toast.success("Product updated");
     },
-    onError: (err: { message?: string }) => {
-      toast.error(err.message ?? "Failed to update product");
+    onError: (err: {
+      message?: string;
+      errors?: Record<string, string[] | undefined>;
+    }) => {
+      const flat = err.errors ? Object.values(err.errors).flat().filter(Boolean) : [];
+      const first = flat[0] as string | undefined;
+      toast.error(first ?? err.message ?? "Failed to update product");
     },
   });
 }
@@ -72,6 +83,63 @@ export function useDeleteProduct() {
     },
     onError: (err: { message?: string }) => {
       toast.error(err.message ?? "Failed to delete product");
+    },
+  });
+}
+
+export function useAddProductImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      productId,
+      file,
+      ...opts
+    }: {
+      productId: string;
+      file: File;
+      altText?: string;
+      isPrimary?: boolean;
+      order?: number;
+    }) => productService.addProductImage(productId, file, opts),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["product", variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Image added");
+    },
+    onError: (err: { message?: string }) => {
+      toast.error(err.message ?? "Failed to add image");
+    },
+  });
+}
+
+export function useDeleteProductImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, imageId }: { productId: string; imageId: string }) =>
+      productService.deleteProductImage(productId, imageId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["product", variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Image removed");
+    },
+    onError: (err: { message?: string }) => {
+      toast.error(err.message ?? "Failed to remove image");
+    },
+  });
+}
+
+export function useSetPrimaryProductImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, imageId }: { productId: string; imageId: string }) =>
+      productService.setPrimaryProductImage(productId, imageId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["product", variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Primary image updated");
+    },
+    onError: (err: { message?: string }) => {
+      toast.error(err.message ?? "Failed to set primary image");
     },
   });
 }
