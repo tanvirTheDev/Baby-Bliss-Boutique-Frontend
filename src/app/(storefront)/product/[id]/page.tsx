@@ -1,26 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { PriceDisplay } from "@/components/ecommerce/price-display";
+import { QuantitySelector } from "@/components/ecommerce/quantity-selector";
+import { RatingStars } from "@/components/ecommerce/rating-stars";
+import { SizePicker } from "@/components/ecommerce/size-picker";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { AGE_RANGES } from "@/config/constants";
+import { useProduct, useRelatedProducts } from "@/hooks/use-products";
+import { backendProductToProduct, DEFAULT_CART_COLOR } from "@/lib/product-adapter";
+import { cn } from "@/lib/utils";
+import { totalVariantStock, type ProductImage } from "@/services/products";
+import { useCartStore } from "@/stores/cart-store";
+import type { Product, ProductSize } from "@/types";
+import { ArrowLeft, ImageIcon, Loader2, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ImageIcon, Loader2, ShoppingCart } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { PriceDisplay } from "@/components/ecommerce/price-display";
-import { RatingStars } from "@/components/ecommerce/rating-stars";
-import { SizePicker } from "@/components/ecommerce/size-picker";
-import { QuantitySelector } from "@/components/ecommerce/quantity-selector";
-import { ProductGrid } from "@/components/ecommerce/product-grid";
-import type { Product, ProductSize } from "@/types";
-import { useCartStore } from "@/stores/cart-store";
-import { backendProductToProduct, DEFAULT_CART_COLOR } from "@/lib/product-adapter";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useProduct, useRelatedProducts } from "@/hooks/use-products";
-import { totalVariantStock, type ProductImage } from "@/services/products";
-import { cn } from "@/lib/utils";
-import { AGE_RANGES } from "@/config/constants";
 
 function sortImages(images: ProductImage[]): ProductImage[] {
   return [...images].sort((a, b) => a.order - b.order);
@@ -104,9 +103,11 @@ function ProductGallery({
 function ProductPurchaseBlock({
   product,
   stockTotal,
+  defaultVariantId,
 }: {
   product: Product;
   stockTotal: number;
+  defaultVariantId: string;
 }) {
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
@@ -149,7 +150,7 @@ function ProductPurchaseBlock({
               toast.error("This product is out of stock");
               return;
             }
-            addItem(product, selectedSize, DEFAULT_CART_COLOR, qty);
+            addItem(product, defaultVariantId, selectedSize, DEFAULT_CART_COLOR, qty);
             toast.success("Added to cart");
           }}
         >
@@ -168,7 +169,7 @@ function ProductPurchaseBlock({
             return;
           }
           if (stockTotal <= 0) return;
-          addItem(product, selectedSize, DEFAULT_CART_COLOR, qty);
+          addItem(product, defaultVariantId, selectedSize, DEFAULT_CART_COLOR, qty);
           router.push("/checkout");
         }}
       >
@@ -202,11 +203,7 @@ export default function ProductDetailPage() {
   }, [backend]);
 
   const stockTotal = backend ? totalVariantStock(backend) : 0;
-
-  const relatedProducts = useMemo(
-    () => relatedBackend.map((p) => backendProductToProduct(p)),
-    [relatedBackend]
-  );
+  const defaultVariantId = backend?.variants?.[0]?.id ?? "";
 
   const isOrganic =
     backend?.tags?.some((t) => t.toLowerCase().includes("organic")) ?? false;
@@ -295,6 +292,7 @@ export default function ProductDetailPage() {
             key={product.id}
             product={product}
             stockTotal={stockTotal}
+            defaultVariantId={defaultVariantId}
           />
 
           <Separator />
@@ -309,13 +307,6 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
-
-      {relatedProducts.length > 0 && (
-        <section className="mt-16">
-          <h2 className="font-heading mb-6 text-2xl font-bold">You may also like</h2>
-          <ProductGrid products={relatedProducts} columns={4} />
-        </section>
-      )}
     </div>
   );
 }

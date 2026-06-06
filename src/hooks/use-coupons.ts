@@ -1,6 +1,11 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import {
   couponService,
   type ListCouponsParams,
@@ -13,6 +18,7 @@ export function useCoupons(filters?: ListCouponsParams) {
   return useQuery({
     queryKey: ["coupons", filters],
     queryFn: () => couponService.list(filters),
+    placeholderData: keepPreviousData,
   });
 }
 

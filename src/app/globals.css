@@ -47,14 +47,22 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Baby Bliss Boutique brand colors */
-  --color-brand-gold: #d4a843;
-  --color-brand-gold-light: #f5e6b8;
-  --color-brand-gold-dark: #b8922e;
-  --color-brand-pink: #e91e8c;
-  --color-brand-pink-light: #fce4ec;
+  /* Baby Bliss Boutique brand colors — driven by settings dynamic vars */
+  --color-brand-gold: var(--dynamic-primary, #d4a843);
+  --color-brand-gold-light: color-mix(
+    in srgb,
+    var(--dynamic-primary, #d4a843) 25%,
+    white
+  );
+  --color-brand-gold-dark: color-mix(in srgb, var(--dynamic-primary, #d4a843) 75%, black);
+  --color-brand-pink: var(--dynamic-secondary, #e91e8c);
+  --color-brand-pink-light: color-mix(
+    in srgb,
+    var(--dynamic-secondary, #e91e8c) 20%,
+    white
+  );
   --color-brand-cream: #faf6f0;
-  --color-brand-olive: #6b6b23;
+  --color-brand-olive: var(--dynamic-accent, #6b6b23);
   --color-brand-navy: #1a1d2e;
   --color-brand-navy-light: #2a2d3e;
   --color-brand-warm-gray: #f5f0eb;
@@ -141,6 +149,6 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply scroll-smooth font-sans;
+    @apply font-sans;
   }
 }

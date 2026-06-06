@@ -123,7 +123,9 @@ export function StorefrontProductCard({
           disabled={product.stock === 0}
           onClick={() => {
             const mapped = backendProductToProduct(product);
-            addItem(mapped, "0-3M", DEFAULT_CART_COLOR, 1);
+            const defaultVariantId = product.variants?.[0]?.id ?? "";
+            if (!defaultVariantId) return;
+            addItem(mapped, defaultVariantId, "0-3M", DEFAULT_CART_COLOR, 1);
           }}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />

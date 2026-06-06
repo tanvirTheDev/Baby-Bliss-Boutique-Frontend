@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/providers/query-provider";
+import { SettingsProvider } from "@/providers/settings-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
@@ -33,13 +34,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${inter.variable} h-full antialiased`}
+    >
       <body className="flex min-h-full flex-col">
         <QueryProvider>
-          <TooltipProvider>
-            {children}
-            <Toaster position="top-right" richColors />
-          </TooltipProvider>
+          <SettingsProvider>
+            <TooltipProvider>
+              {children}
+              <Toaster position="top-right" richColors />
+            </TooltipProvider>
+          </SettingsProvider>
         </QueryProvider>
       </body>
     </html>

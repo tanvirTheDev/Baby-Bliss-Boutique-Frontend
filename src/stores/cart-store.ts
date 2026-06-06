@@ -14,13 +14,20 @@ interface CartState {
   setAppliedCoupon: (coupon: AppliedCoupon | null) => void;
   addItem: (
     product: Product,
+    variantId: string,
     size: ProductSize,
     color: ProductColor,
     quantity?: number
   ) => void;
-  removeItem: (productId: string, size: ProductSize, colorName: string) => void;
+  removeItem: (
+    productId: string,
+    variantId: string,
+    size: ProductSize,
+    colorName: string
+  ) => void;
   updateQuantity: (
     productId: string,
+    variantId: string,
     size: ProductSize,
     colorName: string,
     quantity: number
@@ -42,12 +49,13 @@ export const useCartStore = create<CartState>()(
 
       setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
 
-      addItem: (product, size, color, quantity = 1) => {
+      addItem: (product, variantId, size, color, quantity = 1) => {
         const qty = Math.max(1, Math.floor(quantity));
         set((state) => {
           const existingIndex = state.items.findIndex(
             (item) =>
               item.product.id === product.id &&
+              item.variantId === variantId &&
               item.size === size &&
               item.color.name === color.name
           );
@@ -62,18 +70,19 @@ export const useCartStore = create<CartState>()(
           }
 
           return {
-            items: [...state.items, { product, quantity: qty, size, color }],
+            items: [...state.items, { product, variantId, quantity: qty, size, color }],
             appliedCoupon: null,
           };
         });
       },
 
-      removeItem: (productId, size, colorName) => {
+      removeItem: (productId, variantId, size, colorName) => {
         set((state) => ({
           items: state.items.filter(
             (item) =>
               !(
                 item.product.id === productId &&
+                item.variantId === variantId &&
                 item.size === size &&
                 item.color.name === colorName
               )
@@ -82,11 +91,12 @@ export const useCartStore = create<CartState>()(
         }));
       },
 
-      updateQuantity: (productId, size, colorName, quantity) => {
+      updateQuantity: (productId, variantId, size, colorName, quantity) => {
         if (quantity < 1) return;
         set((state) => ({
           items: state.items.map((item) =>
             item.product.id === productId &&
+            item.variantId === variantId &&
             item.size === size &&
             item.color.name === colorName
               ? { ...item, quantity }

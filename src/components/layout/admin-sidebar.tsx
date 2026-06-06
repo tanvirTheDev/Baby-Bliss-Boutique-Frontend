@@ -15,6 +15,7 @@ import {
   FolderTree,
   TicketPercent,
   Warehouse,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -32,6 +33,7 @@ const iconMap = {
   BarChart3,
   Settings,
   Warehouse,
+  RotateCcw,
 } as const;
 
 interface NavItem {
@@ -47,6 +49,7 @@ const navItems: NavItem[] = [
   { label: "Categories", href: "/dashboard/categories", icon: "FolderTree" },
   { label: "Coupons", href: "/dashboard/coupons", icon: "TicketPercent" },
   { label: "Orders", href: "/dashboard/orders", icon: "ShoppingBag" },
+  { label: "Returns", href: "/dashboard/returns", icon: "RotateCcw" },
   { label: "Customers", href: "/dashboard/customers", icon: "Users" },
   { label: "Analytics", href: "/dashboard/analytics", icon: "BarChart3" },
   { label: "Settings", href: "/dashboard/settings", icon: "Settings" },

@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowRight, Loader2 } from "lucide-react";
 import { HeroBanner } from "@/components/ecommerce/hero-banner";
-import { TestimonialCard } from "@/components/ecommerce/testimonial-card";
 import { NewsletterForm } from "@/components/ecommerce/newsletter-form";
 import { StorefrontProductCard } from "@/components/ecommerce/storefront-product-card";
+import { TestimonialCard } from "@/components/ecommerce/testimonial-card";
 import { Button } from "@/components/ui/button";
-import { useProducts } from "@/hooks/use-products";
 import { useCategories } from "@/hooks/use-categories";
+import { useProducts } from "@/hooks/use-products";
+import { ArrowRight, Loader2 } from "lucide-react";
+import Link from "next/link";
 
 const TESTIMONIALS = [
   {
@@ -90,7 +90,6 @@ export default function HomePage() {
             </Button>
           </Link>
         </div>
-
         {loadingProducts ? (
           <div className="flex justify-center py-16">
             <Loader2 className="text-brand-gold h-8 w-8 animate-spin" />
@@ -106,6 +105,15 @@ export default function HomePage() {
             ))}
           </div>
         )}
+
+        <div className="flex justify-center">
+          <Link href="/shop">
+            <Button variant="outline" className="mt-5 flex w-fit justify-center gap-2">
+              <span className="text-brand-olive text-lg font-bold">View All</span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
       </section>
 
       {/* Newsletter banner */}

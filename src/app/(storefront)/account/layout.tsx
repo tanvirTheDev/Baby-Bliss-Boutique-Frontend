@@ -6,11 +6,12 @@ import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth-store";
-import { User, ShoppingBag, MapPin, LogOut } from "lucide-react";
+import { User, ShoppingBag, MapPin, LogOut, RotateCcw } from "lucide-react";
 
 const nav = [
   { href: "/account", label: "My Account", icon: User },
   { href: "/account/orders", label: "My Orders", icon: ShoppingBag },
+  { href: "/account/returns", label: "Returns & exchanges", icon: RotateCcw },
   { href: "/account/addresses", label: "My Addresses", icon: MapPin },
 ] as const;
 
@@ -36,7 +37,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
             Welcome{user?.fullName ? `, ${user.fullName}` : ""}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Manage your profile, orders, and delivery addresses.
+            Manage your profile, orders, returns, and delivery addresses.
           </p>
         </div>
         <Button
@@ -56,7 +57,9 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
         <aside className="bg-card rounded-xl border p-3">
           <nav className="space-y-1">
             {nav.map((item) => {
-              const active = pathname === item.href;
+              const active =
+                pathname === item.href ||
+                (item.href !== "/account" && pathname.startsWith(`${item.href}/`));
               return (
                 <Link key={item.href} href={item.href}>
                   <div

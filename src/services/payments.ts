@@ -1,6 +1,6 @@
 import { env } from "@/config/env";
 
-export type PaymentMethod = "BKASH" | "NAGAD" | "ROCKET";
+export type PaymentMethod = "BKASH" | "NAGAD" | "ROCKET" | "COD";
 
 export type PaymentStatus = "UNPAID" | "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
@@ -51,7 +51,7 @@ export interface CreateManualPaymentInput {
   paymentMethod: PaymentMethod;
   transactionId: string;
   phoneNumber: string;
-  image: File;
+  image?: File | null;
 }
 
 export type CreateManualPaymentResponse = {
@@ -72,7 +72,7 @@ export const paymentService = {
     formData.append("paymentMethod", input.paymentMethod);
     formData.append("transactionId", input.transactionId);
     formData.append("phoneNumber", input.phoneNumber);
-    formData.append("image", input.image);
+    if (input.image) formData.append("image", input.image);
 
     const res = await fetch(`${env.API_BASE_URL}/payments/manual`, {
       method: "POST",

@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   userService,
@@ -23,6 +28,7 @@ export function useUsers(params?: ListUsersParams) {
   return useQuery({
     queryKey: ["users", params],
     queryFn: () => userService.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 

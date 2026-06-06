@@ -59,6 +59,7 @@ export function CartItem({ item }: CartItemProps) {
             onIncrement={() =>
               updateQuantity(
                 item.product.id,
+                item.variantId,
                 item.size,
                 item.color.name,
                 item.quantity + 1
@@ -67,6 +68,7 @@ export function CartItem({ item }: CartItemProps) {
             onDecrement={() =>
               updateQuantity(
                 item.product.id,
+                item.variantId,
                 item.size,
                 item.color.name,
                 item.quantity - 1
@@ -77,7 +79,9 @@ export function CartItem({ item }: CartItemProps) {
             variant="ghost"
             size="icon"
             className="text-muted-foreground hover:text-destructive h-8 w-8"
-            onClick={() => removeItem(item.product.id, item.size, item.color.name)}
+            onClick={() =>
+              removeItem(item.product.id, item.variantId, item.size, item.color.name)
+            }
           >
             <Trash2 className="h-4 w-4" />
           </Button>

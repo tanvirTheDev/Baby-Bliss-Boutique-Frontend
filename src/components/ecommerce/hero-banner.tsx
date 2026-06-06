@@ -1,8 +1,9 @@
-import Image from "next/image";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
+import Link from "next/link";
+import heroImage from "../../../public/homepageBackground.png";
 
 interface HeroBannerProps {
   title?: string;
@@ -12,9 +13,7 @@ interface HeroBannerProps {
 }
 
 export function HeroBanner({
-  title = siteConfig.tagline,
   subtitle = siteConfig.description,
-  imageSrc = "/hero.jpg",
   className,
 }: HeroBannerProps) {
   return (
@@ -74,7 +73,7 @@ export function HeroBanner({
         {/* Image */}
         <div className="relative hidden aspect-[4/5] md:block">
           <Image
-            src={imageSrc}
+            src={heroImage}
             alt="Baby wearing adorable outfit"
             fill
             className="rounded-2xl object-cover"

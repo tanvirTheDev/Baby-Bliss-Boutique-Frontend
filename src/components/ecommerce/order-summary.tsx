@@ -50,6 +50,7 @@ export function OrderSummary({
 
   const cartLineItems = items.map((i) => ({
     productId: i.product.id,
+    variantId: i.variantId,
     quantity: i.quantity,
   }));
 

@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, PackageCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { useOrder } from "@/hooks/use-orders";
 import { useCreateManualPayment } from "@/hooks/use-payments";
@@ -25,18 +24,20 @@ export default function PaymentPage() {
 
   const createManualPayment = useCreateManualPayment();
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("BKASH");
   const [transactionId, setTransactionId] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
   const amount = useMemo(() => (order ? order.totalAmount : 0), [order]);
 
+  const paymentMethod = order?.payment?.paymentMethod as PaymentMethod | undefined;
+  const isCOD =
+    paymentMethod === "COD" || (!paymentMethod && order?.paymentStatus === "UNPAID");
+
   const submit = async () => {
-    if (!order) return;
+    if (!order || !paymentMethod) return;
     if (!transactionId.trim()) return toast.error("Transaction ID is required");
     if (!phoneNumber.trim()) return toast.error("Phone number is required");
-    if (!file) return toast.error("Payment screenshot is required");
 
     try {
       await createManualPayment.mutateAsync({
@@ -45,7 +46,7 @@ export default function PaymentPage() {
         paymentMethod,
         transactionId: transactionId.trim(),
         phoneNumber: phoneNumber.trim(),
-        image: file,
+        image: file ?? undefined,
       });
 
       toast.success("Payment submitted for review");
@@ -88,76 +89,78 @@ export default function PaymentPage() {
       <div className="mb-6">
         <h1 className="font-heading text-3xl font-bold">Payment</h1>
         <p className="text-muted-foreground text-sm">
-          Submit your payment proof for order{" "}
-          <span className="font-mono">{order.id}</span>.
+          Order <span className="font-mono">{order.id}</span>
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <Card>
           <CardHeader>
-            <CardTitle>Manual payment</CardTitle>
+            <CardTitle>
+              {isCOD ? "Cash on Delivery" : `Pay via ${paymentMethod ?? "—"}`}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">Payment method</Label>
-              <RadioGroup
-                value={paymentMethod}
-                onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
-                className="space-y-2"
-              >
-                {(["BKASH", "NAGAD", "ROCKET"] as const).map((m) => (
-                  <label
-                    key={m}
-                    className="hover:bg-muted/50 has-data-[state=checked]:border-primary flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors"
-                  >
-                    <RadioGroupItem value={m} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{m}</p>
-                      <p className="text-muted-foreground text-xs">
-                        Enter transaction ID and upload screenshot
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Transaction ID</Label>
-                <Input
-                  value={transactionId}
-                  onChange={(e) => setTransactionId(e.target.value)}
-                  placeholder="e.g. 9A7B3C..."
-                />
+            {isCOD ? (
+              /* ── COD: no payment proof needed ────────────────────────── */
+              <div className="flex flex-col items-center gap-4 py-6 text-center">
+                <PackageCheck className="h-12 w-12 text-emerald-500" />
+                <div>
+                  <p className="font-semibold">Pay when your order arrives</p>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    No payment proof needed. Our delivery agent will collect payment upon
+                    delivery.
+                  </p>
+                </div>
+                <Button variant="outline" onClick={() => router.push("/account/orders")}>
+                  View my orders
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Payment phone</Label>
-                <Input
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="01XXXXXXXXX"
-                />
-              </div>
-            </div>
+            ) : (
+              /* ── Online payment proof ─────────────────────────────────── */
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Transaction ID</Label>
+                    <Input
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                      placeholder="e.g. 9A7B3C..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Payment phone</Label>
+                    <Input
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="01XXXXXXXXX"
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">Payment screenshot</Label>
-              <Input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">
+                    Payment screenshot{" "}
+                    <span className="text-muted-foreground font-normal">(optional)</span>
+                  </Label>
+                  <Input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  />
+                </div>
 
-            <Button
-              className="bg-brand-gold hover:bg-brand-gold-dark w-full text-white"
-              onClick={submit}
-              disabled={createManualPayment.isPending}
-            >
-              {createManualPayment.isPending ? "Submitting..." : "Submit payment proof"}
-            </Button>
+                <Button
+                  className="bg-brand-gold hover:bg-brand-gold-dark w-full text-white"
+                  onClick={submit}
+                  disabled={createManualPayment.isPending}
+                >
+                  {createManualPayment.isPending
+                    ? "Submitting..."
+                    : "Submit payment proof"}
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -170,10 +173,18 @@ export default function PaymentPage() {
               <span className="text-muted-foreground">Total amount</span>
               <span className="font-semibold">{formatBDT(amount)}</span>
             </div>
-            <div className="text-muted-foreground pt-2 text-xs">
-              After you submit payment proof, an admin will review and update your payment
-              status.
-            </div>
+            {paymentMethod && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Method</span>
+                <span className="font-medium">{paymentMethod}</span>
+              </div>
+            )}
+            {!isCOD && (
+              <p className="text-muted-foreground pt-2 text-xs">
+                After you submit payment proof, an admin will review and update your
+                payment status.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

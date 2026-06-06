@@ -1,13 +1,15 @@
 "use client";
 
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { checkoutSchema, type CheckoutFormValues } from "@/schemas/checkout";
 import type { ShippingAddress } from "@/services/shipping-addresses";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { toast } from "sonner";
 
 interface CheckoutFormProps {
   onSubmit: (values: CheckoutFormValues) => void;
@@ -26,8 +28,8 @@ export function CheckoutForm({ onSubmit, isLoading, addresses = [] }: CheckoutFo
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       shippingAddressId: "",
+      paymentMethod: "BKASH",
       fullName: "",
-      email: "",
       phoneNumber: "",
       division: "",
       district: "",
@@ -39,16 +41,81 @@ export function CheckoutForm({ onSubmit, isLoading, addresses = [] }: CheckoutFo
   });
 
   const shippingAddressIdW = useWatch({ control, name: "shippingAddressId" }) ?? "";
+  const paymentMethodW = useWatch({ control, name: "paymentMethod" }) ?? "BKASH";
+
+  useEffect(() => {
+    if (!shippingAddressIdW) return;
+    const selected = addresses.find((a) => a.id === shippingAddressIdW);
+    if (!selected) return;
+
+    setValue("fullName", selected.fullName, { shouldDirty: true });
+    setValue("phoneNumber", selected.phoneNumber, { shouldDirty: true });
+    setValue("division", selected.division, { shouldDirty: true });
+    setValue("district", selected.district, { shouldDirty: true });
+    setValue("upazila", selected.upazila, { shouldDirty: true });
+    setValue("area", selected.area ?? "", { shouldDirty: true });
+    setValue("street", selected.street, { shouldDirty: true });
+    setValue("zip", selected.zip ?? "", { shouldDirty: true });
+  }, [addresses, setValue, shippingAddressIdW]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form
+      onSubmit={handleSubmit(onSubmit, (errs) => {
+        const first = Object.values(errs)[0];
+        toast.error(
+          first?.message ? String(first.message) : "Please fill the required fields"
+        );
+      })}
+      className="space-y-6"
+    >
+      {/* Payment method */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            <span className="bg-brand-gold flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white">
+              0
+            </span>
+            Payment Method
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Label className="text-xs font-medium">Choose how you want to pay</Label>
+          <select
+            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            value={paymentMethodW}
+            onChange={(e) =>
+              setValue(
+                "paymentMethod",
+                e.target.value as CheckoutFormValues["paymentMethod"],
+                { shouldDirty: true }
+              )
+            }
+            disabled={isLoading}
+          >
+            <option value="BKASH">bKash</option>
+            <option value="NAGAD">Nagad</option>
+            <option value="ROCKET">Rocket</option>
+            <option value="ONLINE">Online</option>
+            <option value="COD">Cash on delivery</option>
+          </select>
+          {errors.paymentMethod && (
+            <p className="text-destructive text-xs">{errors.paymentMethod.message}</p>
+          )}
+          {paymentMethodW === "COD" && (
+            <p className="text-muted-foreground text-xs">
+              For Cash on Delivery, your phone number is required.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Saved addresses */}
       {addresses.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-3">
               <span className="bg-brand-gold flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white">
-                0
+                1
               </span>
               Use a saved address (optional)
             </CardTitle>
@@ -81,7 +148,7 @@ export function CheckoutForm({ onSubmit, isLoading, addresses = [] }: CheckoutFo
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
             <span className="bg-brand-gold flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white">
-              1
+              2
             </span>
             Contact Information
           </CardTitle>
@@ -93,17 +160,6 @@ export function CheckoutForm({ onSubmit, isLoading, addresses = [] }: CheckoutFo
               <Input placeholder="Eleanor Rigby" {...register("fullName")} />
               {errors.fullName && (
                 <p className="text-destructive text-xs">{errors.fullName.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">Email Address</Label>
-              <Input
-                type="email"
-                placeholder="eleanor@example.com"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-destructive text-xs">{errors.email.message}</p>
               )}
             </div>
           </div>
@@ -122,7 +178,7 @@ export function CheckoutForm({ onSubmit, isLoading, addresses = [] }: CheckoutFo
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
             <span className="bg-brand-gold flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white">
-              2
+              3
             </span>
             Shipping Details
           </CardTitle>

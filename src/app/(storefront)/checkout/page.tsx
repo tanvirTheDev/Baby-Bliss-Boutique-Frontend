@@ -12,17 +12,25 @@ import { useCreateShippingAddress } from "@/hooks/use-shipping-addresses";
 import { useCreateOrder } from "@/hooks/use-orders";
 import { useMe } from "@/hooks/use-users";
 import { useUserShippingAddresses } from "@/hooks/use-shipping-addresses";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, appliedCoupon, clearCart } = useCartStore();
   const { data: me } = useMe();
+  const accessToken = useAuthStore((s) => s.accessToken);
   const userId = me?.id ?? "";
   const { data: addresses = [] } = useUserShippingAddresses(userId);
   const createAddress = useCreateShippingAddress();
   const createOrder = useCreateOrder();
 
   const handleSubmit = async (values: CheckoutFormValues) => {
+    if (!accessToken) {
+      toast.error("Please sign in to place an order");
+      router.push("/login");
+      return;
+    }
+
     if (items.length === 0) {
       toast.error("Your cart is empty");
       router.push("/shop");
@@ -30,6 +38,29 @@ export default function CheckoutPage() {
     }
 
     try {
+      const orderItems = items
+        .map((i) => ({
+          productId: i.product.id,
+          // Backfill for old persisted carts (pre-variantId change)
+          variantId: (i as unknown as { variantId?: string }).variantId,
+          quantity: i.quantity,
+        }))
+        .filter(
+          (x): x is { productId: string; variantId: string; quantity: number } =>
+            typeof x.productId === "string" &&
+            typeof x.variantId === "string" &&
+            x.variantId.length > 0 &&
+            typeof x.quantity === "number" &&
+            x.quantity > 0
+        );
+
+      if (orderItems.length === 0) {
+        toast.error("Your cart items are outdated. Please re-add items to cart.");
+        clearCart();
+        router.push("/shop");
+        return;
+      }
+
       const shippingAddressId =
         values.shippingAddressId && values.shippingAddressId.length > 0
           ? values.shippingAddressId
@@ -49,9 +80,11 @@ export default function CheckoutPage() {
 
       const orderRes = await createOrder.mutateAsync({
         shippingAddressId,
-        items: items.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
+        items: orderItems,
         couponCode: appliedCoupon?.code ?? undefined,
-        notes: `ContactEmail=${values.email}`,
+        paymentMethod: values.paymentMethod,
+        phoneNumber: values.phoneNumber,
+        notes: undefined,
       });
 
       clearCart();

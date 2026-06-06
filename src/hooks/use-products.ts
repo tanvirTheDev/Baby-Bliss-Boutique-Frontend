@@ -1,6 +1,11 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { productService, type ListProductsParams } from "@/services/products";
 import { toast } from "sonner";
 
@@ -8,6 +13,7 @@ export function useProducts(filters?: ListProductsParams) {
   return useQuery({
     queryKey: ["products", filters],
     queryFn: () => productService.getAll(filters),
+    placeholderData: keepPreviousData,
   });
 }
 

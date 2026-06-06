@@ -54,6 +54,7 @@ export type ProductStatus = "active" | "draft" | "archived";
 
 export interface CartItem {
   product: Product;
+  variantId: string;
   quantity: number;
   size: ProductSize;
   color: ProductColor;

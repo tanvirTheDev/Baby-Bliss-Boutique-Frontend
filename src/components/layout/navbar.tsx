@@ -13,7 +13,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 import { siteConfig } from "@/config/site";
+import { useSettingsContext } from "@/context/settings-context";
 import { useCartStore } from "@/stores/cart-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -27,6 +29,9 @@ export function Navbar() {
   const cartCount = useCartStore((s) => s.getItemCount());
   const wishlistCount = useWishlistStore((s) => s.getCount());
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { settings } = useSettingsContext();
+  const storeName = settings?.storeName ?? siteConfig.name;
+  const logoUrl = settings?.logoUrl ?? null;
 
   return (
     <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
@@ -59,9 +64,20 @@ export function Navbar() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <span className="font-heading text-brand-olive text-xl font-bold tracking-tight">
-            {siteConfig.name}
-          </span>
+          {logoUrl ? (
+            <Image
+              src={logoUrl}
+              alt={storeName}
+              width={120}
+              height={40}
+              className="h-8 w-auto object-contain"
+              unoptimized
+            />
+          ) : (
+            <span className="font-heading text-brand-olive text-xl font-bold tracking-tight">
+              {storeName}
+            </span>
+          )}
         </Link>
 
         {/* Desktop navigation */}

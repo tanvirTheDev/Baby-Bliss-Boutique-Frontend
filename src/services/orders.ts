@@ -4,6 +4,8 @@ export type OrderStatus = "PENDING" | "CONFIRMED" | "SHIPPED" | "DELIVERED" | "C
 
 export type PaymentStatus = "UNPAID" | "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
+export type PaymentMethod = "BKASH" | "NAGAD" | "ROCKET" | "ONLINE" | "COD";
+
 export interface OrderUser {
   id: string;
   email: string;
@@ -20,12 +22,24 @@ export interface OrderCoupon {
 export interface OrderItem {
   id: string;
   productId: string | null;
+  variantId?: string | null;
+  sku?: string | null;
+  ageRange?: string | null;
   productName: string;
   quantity: number;
   unitPrice: number;
   product?: {
     images?: { url: string; isPrimary: boolean; altText?: string | null }[];
   };
+}
+
+/** Return row included on order detail from the API */
+export interface OrderReturnSummary {
+  id: string;
+  status: string;
+  returnType: string;
+  reason?: string;
+  createdAt?: string;
 }
 
 export interface ShippingSnapshot {
@@ -39,6 +53,16 @@ export interface ShippingSnapshot {
   zip?: string;
 }
 
+export interface OrderPayment {
+  id: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  transactionId?: string | null;
+  phoneNumber?: string | null;
+  paymentScreenshot?: string | null;
+  amount: number;
+}
+
 export interface Order {
   id: string;
   userId: string;
@@ -46,21 +70,29 @@ export interface Order {
   shippingSnapshot?: ShippingSnapshot | Record<string, unknown>;
   subtotal: number;
   discountAmount: number;
+  deliveryCharge?: number;
   totalAmount: number;
   notes?: string | null;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
+  paymentMethod?: PaymentMethod;
+  trackingNumber?: string | null;
+  cancelReason?: string | null;
   createdAt: string;
   updatedAt: string;
   user?: OrderUser;
   coupon?: OrderCoupon | null;
   orderItems: OrderItem[];
+  payment?: OrderPayment | null;
+  returns?: OrderReturnSummary[];
 }
 
 export interface CreateOrderInput {
   shippingAddressId: string;
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; variantId: string; quantity: number }[];
   couponCode?: string;
+  paymentMethod: PaymentMethod;
+  phoneNumber?: string;
   notes?: string;
 }
 
@@ -68,10 +100,14 @@ export interface AdminCreateOrderInput extends CreateOrderInput {
   userId: string;
 }
 
-export interface UpdateOrderInput {
-  status?: OrderStatus;
-  paymentStatus?: PaymentStatus;
-  notes?: string | null;
+export interface UpdateOrderStatusPayload {
+  status: OrderStatus;
+  trackingNumber?: string;
+  cancelReason?: string;
+}
+
+export interface CancelOrderPayload {
+  cancelReason: string;
 }
 
 export interface OrderListParams {
@@ -117,6 +153,15 @@ export const orderService = {
     return api.get<OrderListResponse>("/orders", q);
   },
 
+  getMine(params?: OrderListParams) {
+    const q: Record<string, string> = {};
+    if (params?.page) q.page = String(params.page);
+    if (params?.limit) q.limit = String(params.limit);
+    if (params?.orderStatus) q.orderStatus = params.orderStatus;
+    if (params?.paymentStatus) q.paymentStatus = params.paymentStatus;
+    return api.get<OrderListResponse>("/orders/my", q);
+  },
+
   getById(id: string) {
     return api.get<SingleOrderResponse>(`/orders/${id}`);
   },
@@ -129,8 +174,18 @@ export const orderService = {
     return api.post<CreateOrderResponse>("/orders/admin", data);
   },
 
-  update(id: string, data: UpdateOrderInput) {
-    return api.patch<SingleOrderResponse>(`/orders/${id}`, data);
+  updateStatus(id: string, data: UpdateOrderStatusPayload) {
+    return api.patch<SingleOrderResponse>(`/orders/${id}/status`, data);
+  },
+
+  updatePaymentStatus(id: string, paymentStatus: PaymentStatus) {
+    return api.patch<SingleOrderResponse>(`/orders/${id}/payment-status`, {
+      paymentStatus,
+    });
+  },
+
+  cancel(id: string, data: CancelOrderPayload) {
+    return api.patch<SingleOrderResponse>(`/orders/${id}/cancel`, data);
   },
 
   delete(id: string) {

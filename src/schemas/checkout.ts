@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const checkoutSchema = z.object({
   shippingAddressId: z.string().optional(),
+  paymentMethod: z.enum(["BKASH", "NAGAD", "ROCKET", "ONLINE", "COD"]),
   fullName: z.string().min(2, "Full name is required"),
-  email: z.string().email("Please enter a valid email"),
   phoneNumber: z
     .string()
     .trim()

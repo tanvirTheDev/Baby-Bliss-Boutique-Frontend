@@ -39,6 +39,13 @@ class ApiClient {
         message: "An unexpected error occurred",
         statusCode: response.status,
       }));
+
+      if (response.status === 401 && typeof window !== "undefined") {
+        localStorage.removeItem("baby-bliss-auth");
+        window.location.href = "/login";
+        throw error;
+      }
+
       throw error;
     }
 
