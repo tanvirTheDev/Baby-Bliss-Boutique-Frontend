@@ -39,8 +39,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
-      {/* Right panel — form */}
       <div className="flex flex-1 items-center justify-center p-8">
         <LoginForm onSubmit={handleLogin} isLoading={loginMutation.isPending} />
       </div>

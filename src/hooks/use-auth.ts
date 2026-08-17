@@ -44,7 +44,6 @@ export function useRegister() {
     },
   });
 }
-
 export function useLogin() {
   const router = useRouter();
   const { setTokens, setUser } = useAuthStore();
