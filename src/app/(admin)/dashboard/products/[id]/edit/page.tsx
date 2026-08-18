@@ -557,6 +557,10 @@ export default function EditProductPage() {
                       <Label className="text-xs">Add variant (age range)</Label>
                       <Select
                         value={newVariantAge || undefined}
+                        items={addableAgeRanges.map((ar) => ({
+                          value: ar.value,
+                          label: ar.label,
+                        }))}
                         onValueChange={(v) => setNewVariantAge(v ?? "")}
                       >
                         <SelectTrigger>
@@ -740,6 +744,10 @@ export default function EditProductPage() {
                   ) : (
                     <Select
                       value={categoryIdW}
+                      items={categories.map((cat) => ({
+                        value: cat.id,
+                        label: cat.name,
+                      }))}
                       onValueChange={(val) =>
                         val && setValue("categoryId", val, { shouldDirty: true })
                       }
@@ -762,6 +770,10 @@ export default function EditProductPage() {
                   <Label className="text-xs">Gender</Label>
                   <Select
                     value={genderW}
+                    items={PRODUCT_GENDER_API.map((g) => ({
+                      value: g.value,
+                      label: g.label,
+                    }))}
                     onValueChange={(val) =>
                       val && setValue("gender", val, { shouldDirty: true })
                     }

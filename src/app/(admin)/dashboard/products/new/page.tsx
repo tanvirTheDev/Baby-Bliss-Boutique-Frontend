@@ -383,6 +383,10 @@ export default function AddProductPage() {
                   ) : (
                     <Select
                       value={categoryIdW}
+                      items={categories.map((cat) => ({
+                        value: cat.id,
+                        label: cat.name,
+                      }))}
                       onValueChange={(val) =>
                         val && setValue("categoryId", val, { shouldValidate: true })
                       }
@@ -410,6 +414,10 @@ export default function AddProductPage() {
                   <Label className="text-xs">Gender</Label>
                   <Select
                     value={genderW}
+                    items={PRODUCT_GENDER_API.map((g) => ({
+                      value: g.value,
+                      label: g.label,
+                    }))}
                     onValueChange={(val) =>
                       val && setValue("gender", val, { shouldValidate: true })
                     }
