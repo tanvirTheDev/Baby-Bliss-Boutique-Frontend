@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQueries } from "@tanstack/react-query";
@@ -19,6 +19,7 @@ import {
   totalVariantStock,
 } from "@/services/products";
 import type { BackendProduct } from "@/services/products";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useCartStore } from "@/stores/cart-store";
 import { backendProductToProduct, DEFAULT_CART_COLOR } from "@/lib/product-adapter";
@@ -50,8 +51,7 @@ export default function WishlistPage() {
   // The store is localStorage-backed, so it is empty during SSR and on the
   // first client render. Rendering the real list before that point produces a
   // hydration mismatch.
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
+  const hydrated = useHydrated();
 
   // Newest first, and keep a stable order while queries resolve.
   const sortedItems = useMemo(

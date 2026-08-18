@@ -22,10 +22,14 @@ import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { SearchBar } from "@/components/ecommerce/search-bar";
+import { useHydrated } from "@/hooks/use-hydrated";
 
 export function Navbar() {
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
+  // Cart, wishlist and auth all come from localStorage-backed stores, which are
+  // empty on the server. Gate them so the first client render still matches.
+  const hydrated = useHydrated();
   const cartCount = useCartStore((s) => s.getItemCount());
   const wishlistCount = useWishlistStore((s) => s.getCount());
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -106,7 +110,7 @@ export function Navbar() {
           <Link href="/wishlist">
             <Button variant="ghost" size="icon" className="relative">
               <Heart className="h-5 w-5" />
-              {wishlistCount > 0 && (
+              {hydrated && wishlistCount > 0 && (
                 <Badge
                   variant="destructive"
                   className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full p-0 text-[10px]"
@@ -121,7 +125,7 @@ export function Navbar() {
           <Link href="/cart">
             <Button variant="ghost" size="icon" className="relative">
               <ShoppingBag className="h-5 w-5" />
-              {cartCount > 0 && (
+              {hydrated && cartCount > 0 && (
                 <Badge className="bg-brand-gold absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full p-0 text-[10px] text-white">
                   {cartCount}
                 </Badge>
@@ -130,7 +134,7 @@ export function Navbar() {
             </Button>
           </Link>
 
-          {isAuthenticated ? (
+          {hydrated && isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="ghost" size="icon" />}>
                 <User className="h-5 w-5" />
