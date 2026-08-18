@@ -11,7 +11,12 @@ import { AGE_RANGES } from "@/config/constants";
 import { useProduct, useRelatedProducts } from "@/hooks/use-products";
 import { backendProductToProduct, DEFAULT_CART_COLOR } from "@/lib/product-adapter";
 import { cn } from "@/lib/utils";
-import { applyDiscount, totalVariantStock, type ProductImage } from "@/services/products";
+import {
+  applyDiscount,
+  displayPrice,
+  totalVariantStock,
+  type ProductImage,
+} from "@/services/products";
 import { formatBDT } from "@/lib/currency";
 import { useCartStore } from "@/stores/cart-store";
 import type { Product, ProductSize } from "@/types";
@@ -233,7 +238,8 @@ export default function ProductDetailPage() {
   const variantStock = selectedVariant?.stock ?? 0;
 
   // Price shown and price charged both come from the selected age range.
-  const selectedBasePrice = selectedVariant?.price ?? backend?.minPrice ?? 0;
+  const selectedBasePrice =
+    selectedVariant?.price ?? (backend ? displayPrice(backend) : 0);
   const selectedSalePrice =
     backend?.discount != null && backend.discount > 0
       ? applyDiscount(selectedBasePrice, backend.discount)

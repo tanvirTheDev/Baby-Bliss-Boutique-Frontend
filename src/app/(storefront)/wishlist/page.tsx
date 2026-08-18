@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { RatingStars } from "@/components/ecommerce/rating-stars";
 import {
   applyDiscount,
+  displayPrice,
   hasPriceRange,
   productService,
   totalVariantStock,
@@ -260,7 +261,7 @@ export default function WishlistPage() {
           const primaryImage =
             product.images?.find((img) => img.isPrimary) ?? product.images?.[0];
           const hasDiscount = product.discount != null && product.discount > 0;
-          const basePrice = product.minPrice;
+          const basePrice = displayPrice(product);
           const salePrice = hasDiscount
             ? applyDiscount(basePrice, product.discount)
             : null;

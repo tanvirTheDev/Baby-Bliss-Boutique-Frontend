@@ -91,14 +91,27 @@ export interface ListProductsParams {
   inStock?: boolean;
 }
 
-/** Cheapest sellable age range, used for "from ৳X" on cards. */
+/**
+ * Cheapest sellable age range, used for "from ৳X" on cards.
+ *
+ * Tolerates a missing range: an API that predates per-age pricing returns a
+ * flat `price` instead, and responses are not runtime-validated, so reading
+ * minPrice blindly crashes the whole page on a stale deployment.
+ */
 export function displayPrice(product: BackendProduct): number {
-  return product.minPrice;
+  const legacyPrice = (product as { price?: number }).price;
+  return product.minPrice ?? legacyPrice ?? 0;
+}
+
+/** Dearest age range, falling back the same way as displayPrice. */
+export function maxDisplayPrice(product: BackendProduct): number {
+  const legacyPrice = (product as { price?: number }).price;
+  return product.maxPrice ?? legacyPrice ?? displayPrice(product);
 }
 
 /** True when age ranges are not all the same price, so cards must say "from". */
 export function hasPriceRange(product: BackendProduct): boolean {
-  return product.maxPrice > product.minPrice;
+  return maxDisplayPrice(product) > displayPrice(product);
 }
 
 /** Price after the product-level discount percentage. */

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { WishlistButton } from "./wishlist-button";
 import { RatingStars } from "./rating-stars";
 import type { BackendProduct } from "@/services/products";
-import { applyDiscount, hasPriceRange } from "@/services/products";
+import { applyDiscount, displayPrice, hasPriceRange } from "@/services/products";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
 import { backendProductToProduct, DEFAULT_CART_COLOR } from "@/lib/product-adapter";
@@ -38,7 +38,7 @@ export function StorefrontProductCard({
     product.images?.find((img) => img.isPrimary) ?? product.images?.[0];
   const hasDiscount = product.discount != null && product.discount > 0;
   // Cards advertise the cheapest age range; the product page prices the rest.
-  const basePrice = product.minPrice;
+  const basePrice = displayPrice(product);
   const salePrice = hasDiscount ? applyDiscount(basePrice, product.discount) : null;
   const showsFrom = hasPriceRange(product);
   const ageBadge = ageRangeBadgeLabel(product.ageRange);
