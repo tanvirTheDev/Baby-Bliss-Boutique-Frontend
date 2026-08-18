@@ -43,7 +43,12 @@ export function useUpdateProductVariant() {
     mutationFn: (vars: {
       id: string;
       productId: string;
-      body: Partial<{ reorderLevel: number; isActive: boolean }>;
+      body: Partial<{
+        price: number;
+        stock: number;
+        reorderLevel: number;
+        isActive: boolean;
+      }>;
     }) => productVariantService.update(vars.id, vars.body),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({

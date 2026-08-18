@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQueries } from "@tanstack/react-query";
@@ -11,16 +11,20 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { RatingStars } from "@/components/ecommerce/rating-stars";
-import { productService, totalVariantStock } from "@/services/products";
+import {
+  applyDiscount,
+  displayPrice,
+  hasPriceRange,
+  productService,
+  totalVariantStock,
+} from "@/services/products";
 import type { BackendProduct } from "@/services/products";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useCartStore } from "@/stores/cart-store";
 import { backendProductToProduct, DEFAULT_CART_COLOR } from "@/lib/product-adapter";
 import { formatBDT } from "@/lib/currency";
 import { AGE_RANGES } from "@/config/constants";
-import type { ProductSize } from "@/types";
-
-const DEFAULT_SIZE: ProductSize = "0-3M";
 
 function ageRangeLabel(ageRanges: string[] | undefined): string | null {
   if (!ageRanges?.length) return null;
@@ -47,8 +51,7 @@ export default function WishlistPage() {
   // The store is localStorage-backed, so it is empty during SSR and on the
   // first client render. Rendering the real list before that point produces a
   // hydration mismatch.
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
+  const hydrated = useHydrated();
 
   // Newest first, and keep a stable order while queries resolve.
   const sortedItems = useMemo(
@@ -100,9 +103,9 @@ export default function WishlistPage() {
     addToCart(
       backendProductToProduct(product),
       variantId,
-      DEFAULT_SIZE,
       DEFAULT_CART_COLOR,
-      1
+      1,
+      applyDiscount(product.variants![0].price, product.discount)
     );
 
     if (alsoRemove) removeItem(product.id);
@@ -118,9 +121,9 @@ export default function WishlistPage() {
       addToCart(
         backendProductToProduct(product),
         variantId,
-        DEFAULT_SIZE,
         DEFAULT_CART_COLOR,
-        1
+        1,
+        applyDiscount(product.variants![0].price, product.discount)
       );
       removeItem(product.id);
     });
@@ -253,9 +256,11 @@ export default function WishlistPage() {
           const primaryImage =
             product.images?.find((img) => img.isPrimary) ?? product.images?.[0];
           const hasDiscount = product.discount != null && product.discount > 0;
+          const basePrice = displayPrice(product);
           const salePrice = hasDiscount
-            ? product.price - (product.price * product.discount!) / 100
+            ? applyDiscount(basePrice, product.discount)
             : null;
+          const showsFrom = hasPriceRange(product);
           const stock = totalVariantStock(product);
           const purchasable =
             stock > 0 && !!product.variants?.[0]?.id && product.isActive;
@@ -346,12 +351,15 @@ export default function WishlistPage() {
                 )}
 
                 <div className="flex items-center gap-2">
+                  {showsFrom && (
+                    <span className="text-muted-foreground text-xs">from</span>
+                  )}
                   <span className="text-sm font-semibold">
-                    {formatBDT(salePrice ?? product.price)}
+                    {formatBDT(salePrice ?? basePrice)}
                   </span>
                   {salePrice && (
                     <span className="text-muted-foreground text-sm line-through">
-                      {formatBDT(product.price)}
+                      {formatBDT(basePrice)}
                     </span>
                   )}
                 </div>
