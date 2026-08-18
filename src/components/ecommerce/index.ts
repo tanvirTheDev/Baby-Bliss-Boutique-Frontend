@@ -4,7 +4,6 @@ export { CartItem } from "./cart-item";
 export { OrderSummary } from "./order-summary";
 export { PriceDisplay } from "./price-display";
 export { RatingStars } from "./rating-stars";
-export { SizePicker } from "./size-picker";
 export { ColorSwatch } from "./color-swatch";
 export { QuantitySelector } from "./quantity-selector";
 export { CategoryFilter } from "./category-filter";

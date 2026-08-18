@@ -36,7 +36,7 @@ export default function CartPage() {
           <div className="space-y-4">
             {items.map((item, i) => (
               <CartItem
-                key={`${item.product.id}-${item.size}-${item.color.name}-${i}`}
+                key={`${item.product.id}-${item.variantId}-${item.color.name}-${i}`}
                 item={item}
               />
             ))}

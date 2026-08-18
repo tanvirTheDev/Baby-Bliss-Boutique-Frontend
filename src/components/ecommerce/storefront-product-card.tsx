@@ -131,7 +131,6 @@ export function StorefrontProductCard({
             addItem(
               mapped,
               defaultVariant.id,
-              "0-3M",
               DEFAULT_CART_COLOR,
               1,
               applyDiscount(defaultVariant.price, product.discount)

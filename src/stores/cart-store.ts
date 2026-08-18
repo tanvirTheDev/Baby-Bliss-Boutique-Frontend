@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CartItem, ProductSize, ProductColor, Product } from "@/types";
+import type { CartItem, ProductColor, Product } from "@/types";
 import { FREE_SHIPPING_THRESHOLD, TAX_RATE } from "@/config/constants";
 
 export interface AppliedCoupon {
@@ -15,7 +15,6 @@ interface CartState {
   addItem: (
     product: Product,
     variantId: string,
-    size: ProductSize,
     color: ProductColor,
     quantity?: number,
     /**
@@ -24,16 +23,10 @@ interface CartState {
      */
     unitPrice?: number
   ) => void;
-  removeItem: (
-    productId: string,
-    variantId: string,
-    size: ProductSize,
-    colorName: string
-  ) => void;
+  removeItem: (productId: string, variantId: string, colorName: string) => void;
   updateQuantity: (
     productId: string,
     variantId: string,
-    size: ProductSize,
     colorName: string,
     quantity: number
   ) => void;
@@ -54,7 +47,7 @@ export const useCartStore = create<CartState>()(
 
       setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
 
-      addItem: (product, variantId, size, color, quantity = 1, unitPrice) => {
+      addItem: (product, variantId, color, quantity = 1, unitPrice) => {
         const qty = Math.max(1, Math.floor(quantity));
         const price = unitPrice ?? product.salePrice ?? product.price;
         set((state) => {
@@ -62,7 +55,6 @@ export const useCartStore = create<CartState>()(
             (item) =>
               item.product.id === product.id &&
               item.variantId === variantId &&
-              item.size === size &&
               item.color.name === color.name
           );
 
@@ -78,21 +70,20 @@ export const useCartStore = create<CartState>()(
           return {
             items: [
               ...state.items,
-              { product, variantId, quantity: qty, size, color, unitPrice: price },
+              { product, variantId, quantity: qty, color, unitPrice: price },
             ],
             appliedCoupon: null,
           };
         });
       },
 
-      removeItem: (productId, variantId, size, colorName) => {
+      removeItem: (productId, variantId, colorName) => {
         set((state) => ({
           items: state.items.filter(
             (item) =>
               !(
                 item.product.id === productId &&
                 item.variantId === variantId &&
-                item.size === size &&
                 item.color.name === colorName
               )
           ),
@@ -100,13 +91,12 @@ export const useCartStore = create<CartState>()(
         }));
       },
 
-      updateQuantity: (productId, variantId, size, colorName, quantity) => {
+      updateQuantity: (productId, variantId, colorName, quantity) => {
         if (quantity < 1) return;
         set((state) => ({
           items: state.items.map((item) =>
             item.product.id === productId &&
             item.variantId === variantId &&
-            item.size === size &&
             item.color.name === colorName
               ? { ...item, quantity }
               : item

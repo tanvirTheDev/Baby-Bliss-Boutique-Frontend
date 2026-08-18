@@ -127,7 +127,7 @@ export default function EditProductPage() {
       discount: product.discount ?? undefined,
       categoryId: product.categoryId,
       gender: product.gender ?? "UNISEX",
-      tags: (product.tags ?? []).filter((t) => !String(t).startsWith("SIZE:")),
+      tags: product.tags ?? [],
     });
   }, [product, reset]);
 
@@ -162,9 +162,6 @@ export default function EditProductPage() {
       toast.error("Add at least one variant (age range) in Variants & stock below.");
       return;
     }
-    const preservedSizeTags = (product?.tags ?? []).filter(
-      (t): t is string => typeof t === "string" && t.startsWith("SIZE:")
-    );
     updateMutation.mutate({
       id: productId,
       data: {
@@ -176,7 +173,7 @@ export default function EditProductPage() {
             : undefined,
         categoryId: values.categoryId,
         gender: values.gender,
-        tags: [...(values.tags ?? []), ...preservedSizeTags],
+        tags: values.tags ?? [],
       },
     });
   };

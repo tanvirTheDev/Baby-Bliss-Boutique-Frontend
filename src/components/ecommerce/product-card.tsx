@@ -52,18 +52,6 @@ export function ProductCard({ product, className }: ProductCardProps) {
               <Badge className="bg-brand-gold text-xs text-white">New In</Badge>
             )}
           </div>
-
-          {/* Size tags */}
-          <div className="absolute right-2 bottom-2 flex gap-1">
-            {product.sizes.slice(0, 3).map((size) => (
-              <span
-                key={size}
-                className="text-foreground rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium"
-              >
-                {size}
-              </span>
-            ))}
-          </div>
         </div>
       </Link>
 

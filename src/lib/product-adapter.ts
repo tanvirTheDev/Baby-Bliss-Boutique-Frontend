@@ -1,11 +1,9 @@
 "use client";
 
 import type { BackendProduct } from "@/services/products";
-import type { Product, ProductColor, ProductSize } from "@/types";
-import { PRODUCT_SIZES } from "@/config/constants";
+import type { Product, ProductColor } from "@/types";
 
 const DEFAULT_COLOR: ProductColor = { name: "Default", hex: "#111827" };
-const SIZE_TAG_PREFIX = "SIZE:";
 
 function computeSalePrice(price: number, discount?: number | null) {
   if (discount == null) return undefined;
@@ -26,16 +24,6 @@ function ageGroupFromAgeRanges(ageRanges?: string[] | null): Product["ageGroup"]
   if (has("ZERO_TO_SIX_MONTHS") || has("SIX_TO_TWELVE_MONTHS")) return "newborn";
   if (has("ONE_YEAR") || has("TWO_YEARS")) return "infant";
   return "toddler";
-}
-
-function sizesFromTags(tags: string[] | undefined): ProductSize[] {
-  if (!tags?.length) return [...(PRODUCT_SIZES as unknown as ProductSize[])];
-  const allowed = new Set(PRODUCT_SIZES as unknown as ProductSize[]);
-  const parsed = tags
-    .filter((t) => typeof t === "string" && t.startsWith(SIZE_TAG_PREFIX))
-    .map((t) => t.slice(SIZE_TAG_PREFIX.length) as ProductSize)
-    .filter((s) => allowed.has(s));
-  return parsed.length ? parsed : [...(PRODUCT_SIZES as unknown as ProductSize[])];
 }
 
 export function backendProductToProduct(p: BackendProduct): Product {
@@ -62,7 +50,6 @@ export function backendProductToProduct(p: BackendProduct): Product {
       alt: img.altText ?? p.name,
       isPrimary: img.isPrimary,
     })),
-    sizes: sizesFromTags(p.tags),
     colors: [DEFAULT_COLOR],
     gender: "unisex",
     ageGroup: ageGroupFromAgeRanges(ageRangeList),

@@ -24,9 +24,6 @@ import { useCartStore } from "@/stores/cart-store";
 import { backendProductToProduct, DEFAULT_CART_COLOR } from "@/lib/product-adapter";
 import { formatBDT } from "@/lib/currency";
 import { AGE_RANGES } from "@/config/constants";
-import type { ProductSize } from "@/types";
-
-const DEFAULT_SIZE: ProductSize = "0-3M";
 
 function ageRangeLabel(ageRanges: string[] | undefined): string | null {
   if (!ageRanges?.length) return null;
@@ -106,7 +103,6 @@ export default function WishlistPage() {
     addToCart(
       backendProductToProduct(product),
       variantId,
-      DEFAULT_SIZE,
       DEFAULT_CART_COLOR,
       1,
       applyDiscount(product.variants![0].price, product.discount)
@@ -125,7 +121,6 @@ export default function WishlistPage() {
       addToCart(
         backendProductToProduct(product),
         variantId,
-        DEFAULT_SIZE,
         DEFAULT_CART_COLOR,
         1,
         applyDiscount(product.variants![0].price, product.discount)
