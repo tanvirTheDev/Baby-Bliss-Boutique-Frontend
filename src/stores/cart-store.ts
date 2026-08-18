@@ -17,7 +17,12 @@ interface CartState {
     variantId: string,
     size: ProductSize,
     color: ProductColor,
-    quantity?: number
+    quantity?: number,
+    /**
+     * Price of the chosen age range after discount. Defaults to the product's
+     * cheapest range, which is only correct for single-price products.
+     */
+    unitPrice?: number
   ) => void;
   removeItem: (
     productId: string,
@@ -49,8 +54,9 @@ export const useCartStore = create<CartState>()(
 
       setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
 
-      addItem: (product, variantId, size, color, quantity = 1) => {
+      addItem: (product, variantId, size, color, quantity = 1, unitPrice) => {
         const qty = Math.max(1, Math.floor(quantity));
+        const price = unitPrice ?? product.salePrice ?? product.price;
         set((state) => {
           const existingIndex = state.items.findIndex(
             (item) =>
@@ -70,7 +76,10 @@ export const useCartStore = create<CartState>()(
           }
 
           return {
-            items: [...state.items, { product, variantId, quantity: qty, size, color }],
+            items: [
+              ...state.items,
+              { product, variantId, quantity: qty, size, color, unitPrice: price },
+            ],
             appliedCoupon: null,
           };
         });
@@ -112,8 +121,12 @@ export const useCartStore = create<CartState>()(
 
       getSubtotal: () =>
         get().items.reduce(
+          // unitPrice is the age range's own price. Items saved before per-age
+          // pricing shipped have none, so fall back to the product figure.
           (acc, item) =>
-            acc + (item.product.salePrice ?? item.product.price) * item.quantity,
+            acc +
+            (item.unitPrice ?? item.product.salePrice ?? item.product.price) *
+              item.quantity,
           0
         ),
 

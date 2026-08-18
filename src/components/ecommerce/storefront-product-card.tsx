@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { WishlistButton } from "./wishlist-button";
 import { RatingStars } from "./rating-stars";
 import type { BackendProduct } from "@/services/products";
+import { applyDiscount, hasPriceRange } from "@/services/products";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
 import { backendProductToProduct, DEFAULT_CART_COLOR } from "@/lib/product-adapter";
@@ -36,9 +37,10 @@ export function StorefrontProductCard({
   const primaryImage =
     product.images?.find((img) => img.isPrimary) ?? product.images?.[0];
   const hasDiscount = product.discount != null && product.discount > 0;
-  const salePrice = hasDiscount
-    ? product.price - (product.price * product.discount!) / 100
-    : null;
+  // Cards advertise the cheapest age range; the product page prices the rest.
+  const basePrice = product.minPrice;
+  const salePrice = hasDiscount ? applyDiscount(basePrice, product.discount) : null;
+  const showsFrom = hasPriceRange(product);
   const ageBadge = ageRangeBadgeLabel(product.ageRange);
 
   return (
@@ -108,12 +110,13 @@ export function StorefrontProductCard({
         )}
 
         <div className="flex items-center gap-2">
+          {showsFrom && <span className="text-muted-foreground text-xs">from</span>}
           <span className="text-sm font-semibold">
-            {formatBDT(salePrice ?? product.price)}
+            {formatBDT(salePrice ?? basePrice)}
           </span>
           {salePrice && (
             <span className="text-muted-foreground text-sm line-through">
-              {formatBDT(product.price)}
+              {formatBDT(basePrice)}
             </span>
           )}
         </div>
@@ -123,9 +126,16 @@ export function StorefrontProductCard({
           disabled={product.stock === 0}
           onClick={() => {
             const mapped = backendProductToProduct(product);
-            const defaultVariantId = product.variants?.[0]?.id ?? "";
-            if (!defaultVariantId) return;
-            addItem(mapped, defaultVariantId, "0-3M", DEFAULT_CART_COLOR, 1);
+            const defaultVariant = product.variants?.[0];
+            if (!defaultVariant) return;
+            addItem(
+              mapped,
+              defaultVariant.id,
+              "0-3M",
+              DEFAULT_CART_COLOR,
+              1,
+              applyDiscount(defaultVariant.price, product.discount)
+            );
           }}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />

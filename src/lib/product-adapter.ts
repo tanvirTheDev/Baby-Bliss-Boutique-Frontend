@@ -39,7 +39,7 @@ function sizesFromTags(tags: string[] | undefined): ProductSize[] {
 }
 
 export function backendProductToProduct(p: BackendProduct): Product {
-  const salePrice = computeSalePrice(p.price, p.discount);
+  const salePrice = computeSalePrice(p.minPrice, p.discount);
   const isOrganic = p.tags?.some((t) => t.toLowerCase().includes("organic")) ?? false;
   const ageRangeList = ageRangesFromProduct(p);
   const stockTotal = p.variants?.reduce((s, v) => s + v.stock, 0) ?? p.stock ?? 0;
@@ -49,7 +49,8 @@ export function backendProductToProduct(p: BackendProduct): Product {
     name: p.name,
     slug: p.id, // backend doesn't provide slug yet
     description: p.description,
-    price: p.price,
+    price: p.minPrice,
+    maxPrice: p.maxPrice,
     salePrice,
     sku: p.variants?.[0]?.sku ?? p.id.slice(0, 10),
     stock: stockTotal,

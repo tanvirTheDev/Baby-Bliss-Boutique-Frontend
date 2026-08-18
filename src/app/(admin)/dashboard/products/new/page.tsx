@@ -18,23 +18,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCreateProduct } from "@/hooks/use-products";
 import { toast } from "sonner";
 import { useCategories } from "@/hooks/use-categories";
-import { AGE_RANGES, PRODUCT_GENDER_API } from "@/config/constants";
+import { PRODUCT_GENDER_API } from "@/config/constants";
+import {
+  AgePriceTable,
+  emptyAgeRows,
+  rowsToVariants,
+  validateAgeRows,
+  type AgeVariantRow,
+} from "@/components/forms/age-price-table";
 
 interface ProductFormValues {
   name: string;
   description: string;
-  price: number;
   discount?: number;
   categoryId: string;
   gender: string;
-  ageRanges: string[];
   tags: string[];
-  stock: number;
 }
 
 interface ImagePreview {
@@ -62,19 +65,19 @@ export default function AddProductPage() {
     defaultValues: {
       name: "",
       description: "",
-      price: 0,
       discount: undefined,
       categoryId: "",
       gender: "UNISEX",
-      ageRanges: [],
       tags: [],
-      stock: 0,
     },
   });
 
+  // Pricing is per age range, so it lives outside react-hook-form as one
+  // controlled table rather than sixteen registered field pairs.
+  const [ageRows, setAgeRows] = useState<AgeVariantRow[]>(emptyAgeRows);
+
   const categoryIdW = useWatch({ control, name: "categoryId" });
   const genderW = useWatch({ control, name: "gender" });
-  const ageRangesW = useWatch({ control, name: "ageRanges" }) ?? [];
 
   const addFiles = useCallback((files: File[]) => {
     setImages((prev) => {
@@ -124,28 +127,21 @@ export default function AddProductPage() {
   };
 
   const onSubmit = (values: ProductFormValues) => {
-    if (!values.ageRanges?.length) {
-      toast.error("Select at least one age range.");
+    const problem = validateAgeRows(ageRows);
+    if (problem) {
+      toast.error(problem);
       return;
     }
     const formData = new FormData();
     formData.append("name", values.name);
     formData.append("description", values.description);
-    formData.append("price", String(Number(values.price)));
     if (values.discount != null && !Number.isNaN(Number(values.discount))) {
       formData.append("discount", String(Number(values.discount)));
     }
     formData.append("categoryId", values.categoryId);
     formData.append("gender", values.gender || "UNISEX");
 
-    const stockNum = Math.max(0, Math.floor(Number(values.stock) || 0));
-    const variants = values.ageRanges.map((ageRange) => ({
-      ageRange,
-      stock: stockNum,
-      reorderLevel: 10,
-      isActive: true,
-    }));
-    formData.append("variants", JSON.stringify(variants));
+    formData.append("variants", JSON.stringify(rowsToVariants(ageRows)));
 
     values.tags?.forEach((tag) => {
       formData.append("tags", tag);
@@ -310,64 +306,30 @@ export default function AddProductPage() {
               </CardContent>
             </Card>
 
-            {/* Pricing & Inventory */}
-            <div className="grid gap-6 sm:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pricing</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold tracking-wider uppercase">
-                      Regular Price
-                    </Label>
-                    <div className="relative">
-                      <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
-                        ৳
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        className="pl-7"
-                        {...register("price")}
-                      />
-                    </div>
-                    {errors.price && (
-                      <p className="text-destructive text-xs">{errors.price.message}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Discount (%)</Label>
-                    <Input
-                      type="number"
-                      step="1"
-                      min="0"
-                      max="100"
-                      placeholder="0"
-                      {...register("discount")}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Pricing & Inventory — one row per age range */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Pricing &amp; Inventory</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <AgePriceTable rows={ageRows} onChange={setAgeRows} />
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Inventory</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold tracking-wider uppercase">
-                      Stock Quantity
-                    </Label>
-                    <Input type="number" placeholder="100" {...register("stock")} />
-                    {errors.stock && (
-                      <p className="text-destructive text-xs">{errors.stock.message}</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                <div className="space-y-2 sm:max-w-[200px]">
+                  <Label className="text-xs">Discount (%)</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="100"
+                    placeholder="0"
+                    {...register("discount")}
+                  />
+                  <p className="text-muted-foreground text-[11px]">
+                    Applies to every age range above.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* ── Right sidebar ── */}
@@ -463,38 +425,6 @@ export default function AddProductPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-
-                {/* Age ranges (multi-select, min. 1) */}
-                <div className="space-y-2">
-                  <Label className="text-xs">Age ranges</Label>
-                  <p className="text-muted-foreground text-[11px]">
-                    Select which ages this product is suitable for. At least one is
-                    required.
-                  </p>
-                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
-                    {AGE_RANGES.map((ar) => {
-                      const selected = ageRangesW;
-                      const checked = selected.includes(ar.value);
-                      return (
-                        <label
-                          key={ar.value}
-                          className="flex cursor-pointer items-center gap-2 text-sm"
-                        >
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={(on) => {
-                              const next = on
-                                ? [...selected, ar.value]
-                                : selected.filter((v) => v !== ar.value);
-                              setValue("ageRanges", next, { shouldValidate: true });
-                            }}
-                          />
-                          <span>{ar.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
                 </div>
 
                 {/* Tags */}

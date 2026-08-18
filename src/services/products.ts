@@ -14,6 +14,8 @@ export interface BackendProductVariant {
   id: string;
   sku: string;
   ageRange: string;
+  /** Price for this age range. Pricing lives on the variant, not the product. */
+  price: number;
   stock: number;
   reorderLevel?: number;
   isActive?: boolean;
@@ -24,7 +26,10 @@ export interface BackendProduct {
   userId: string;
   name: string;
   description: string;
-  price: number;
+  /** Lowest variant price. Denormalised by the API for listing and sorting. */
+  minPrice: number;
+  /** Highest variant price. Equal to minPrice when every age costs the same. */
+  maxPrice: number;
   discount?: number | null;
   categoryId: string;
   gender?: string;
@@ -84,6 +89,22 @@ export interface ListProductsParams {
   sortDir?: "asc" | "desc";
   /** Alias for `inStockOnly` */
   inStock?: boolean;
+}
+
+/** Cheapest sellable age range, used for "from ৳X" on cards. */
+export function displayPrice(product: BackendProduct): number {
+  return product.minPrice;
+}
+
+/** True when age ranges are not all the same price, so cards must say "from". */
+export function hasPriceRange(product: BackendProduct): boolean {
+  return product.maxPrice > product.minPrice;
+}
+
+/** Price after the product-level discount percentage. */
+export function applyDiscount(price: number, discount?: number | null): number {
+  if (discount == null || discount <= 0) return price;
+  return parseFloat((price - (price * discount) / 100).toFixed(2));
 }
 
 export function totalVariantStock(product: BackendProduct): number {

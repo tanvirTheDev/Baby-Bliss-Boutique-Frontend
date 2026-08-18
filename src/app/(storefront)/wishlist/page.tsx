@@ -11,7 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { RatingStars } from "@/components/ecommerce/rating-stars";
-import { productService, totalVariantStock } from "@/services/products";
+import {
+  applyDiscount,
+  hasPriceRange,
+  productService,
+  totalVariantStock,
+} from "@/services/products";
 import type { BackendProduct } from "@/services/products";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useCartStore } from "@/stores/cart-store";
@@ -102,7 +107,8 @@ export default function WishlistPage() {
       variantId,
       DEFAULT_SIZE,
       DEFAULT_CART_COLOR,
-      1
+      1,
+      applyDiscount(product.variants![0].price, product.discount)
     );
 
     if (alsoRemove) removeItem(product.id);
@@ -120,7 +126,8 @@ export default function WishlistPage() {
         variantId,
         DEFAULT_SIZE,
         DEFAULT_CART_COLOR,
-        1
+        1,
+        applyDiscount(product.variants![0].price, product.discount)
       );
       removeItem(product.id);
     });
@@ -253,9 +260,11 @@ export default function WishlistPage() {
           const primaryImage =
             product.images?.find((img) => img.isPrimary) ?? product.images?.[0];
           const hasDiscount = product.discount != null && product.discount > 0;
+          const basePrice = product.minPrice;
           const salePrice = hasDiscount
-            ? product.price - (product.price * product.discount!) / 100
+            ? applyDiscount(basePrice, product.discount)
             : null;
+          const showsFrom = hasPriceRange(product);
           const stock = totalVariantStock(product);
           const purchasable =
             stock > 0 && !!product.variants?.[0]?.id && product.isActive;
@@ -346,12 +355,15 @@ export default function WishlistPage() {
                 )}
 
                 <div className="flex items-center gap-2">
+                  {showsFrom && (
+                    <span className="text-muted-foreground text-xs">from</span>
+                  )}
                   <span className="text-sm font-semibold">
-                    {formatBDT(salePrice ?? product.price)}
+                    {formatBDT(salePrice ?? basePrice)}
                   </span>
                   {salePrice && (
                     <span className="text-muted-foreground text-sm line-through">
-                      {formatBDT(product.price)}
+                      {formatBDT(basePrice)}
                     </span>
                   )}
                 </div>

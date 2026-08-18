@@ -352,7 +352,11 @@ export default function ProductManagementPage() {
                 >
                   {catLabel}
                 </Badge>
-                <span className="text-sm font-medium">৳{product.price.toFixed(2)}</span>
+                <span className="text-sm font-medium">
+                  {product.maxPrice > product.minPrice
+                    ? `৳${product.minPrice.toFixed(2)} – ৳${product.maxPrice.toFixed(2)}`
+                    : `৳${product.minPrice.toFixed(2)}`}
+                </span>
                 <div>
                   <span className="text-sm">{stockTotal}</span>
                   {lowStock && (

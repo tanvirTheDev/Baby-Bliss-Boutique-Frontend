@@ -61,7 +61,6 @@ import { toast } from "sonner";
 interface ProductFormValues {
   name: string;
   description: string;
-  price: number;
   discount?: number;
   categoryId: string;
   gender: string;
@@ -90,6 +89,7 @@ export default function EditProductPage() {
   const adjustStockMutation = useAdjustVariantStock();
   const [stockDraft, setStockDraft] = useState<Record<string, number>>({});
   const [newVariantAge, setNewVariantAge] = useState<string>("");
+  const [newVariantPrice, setNewVariantPrice] = useState<string>("");
 
   const [tagInput, setTagInput] = useState("");
   const [showDelete, setShowDelete] = useState(false);
@@ -105,7 +105,6 @@ export default function EditProductPage() {
     defaultValues: {
       name: "",
       description: "",
-      price: 0,
       discount: undefined,
       categoryId: "",
       gender: "UNISEX",
@@ -125,7 +124,6 @@ export default function EditProductPage() {
     reset({
       name: product.name,
       description: product.description,
-      price: product.price,
       discount: product.discount ?? undefined,
       categoryId: product.categoryId,
       gender: product.gender ?? "UNISEX",
@@ -172,7 +170,6 @@ export default function EditProductPage() {
       data: {
         name: values.name,
         description: values.description,
-        price: Number(values.price),
         discount:
           values.discount != null && !Number.isNaN(Number(values.discount))
             ? Number(values.discount)
@@ -459,6 +456,31 @@ export default function EditProductPage() {
                             </p>
                           </div>
                           <div className="w-28 space-y-1">
+                            <Label className="text-[10px] uppercase">Price (৳)</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              defaultValue={v.price}
+                              key={`price-${v.id}-${v.price}`}
+                              onBlur={(e) => {
+                                const n = Number(e.target.value);
+                                if (!Number.isFinite(n) || n <= 0) {
+                                  toast.error("Price must be greater than 0");
+                                  e.target.value = String(v.price);
+                                  return;
+                                }
+                                if (n !== v.price) {
+                                  updateVariantMutation.mutate({
+                                    id: v.id,
+                                    productId,
+                                    body: { price: n },
+                                  });
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="w-28 space-y-1">
                             <Label className="text-[10px] uppercase">Stock</Label>
                             <Input
                               type="number"
@@ -552,21 +574,47 @@ export default function EditProductPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="w-32 space-y-1">
+                      <Label className="text-xs">Price (৳)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        placeholder="0.00"
+                        value={newVariantPrice}
+                        onChange={(e) => setNewVariantPrice(e.target.value)}
+                      />
+                    </div>
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={!newVariantAge || createVariantMutation.isPending}
+                      disabled={
+                        !newVariantAge ||
+                        newVariantPrice === "" ||
+                        createVariantMutation.isPending
+                      }
                       onClick={() => {
                         if (!newVariantAge) return;
+                        const price = Number(newVariantPrice);
+                        if (!Number.isFinite(price) || price <= 0) {
+                          toast.error("Enter a price greater than 0");
+                          return;
+                        }
                         createVariantMutation.mutate(
                           {
                             productId,
                             ageRange: newVariantAge,
+                            price,
                             stock: 0,
                             reorderLevel: 10,
                             isActive: true,
                           },
-                          { onSuccess: () => setNewVariantAge("") }
+                          {
+                            onSuccess: () => {
+                              setNewVariantAge("");
+                              setNewVariantPrice("");
+                            },
+                          }
                         );
                       }}
                     >
@@ -584,29 +632,10 @@ export default function EditProductPage() {
                   <CardTitle>Pricing</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold tracking-wider uppercase">
-                      Regular Price
-                    </Label>
-                    <div className="relative">
-                      <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
-                        ৳
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        className="pl-7"
-                        {...register("price", {
-                          required: "Price is required",
-                          valueAsNumber: true,
-                        })}
-                      />
-                    </div>
-                    {errors.price && (
-                      <p className="text-destructive text-xs">{errors.price.message}</p>
-                    )}
-                  </div>
+                  <p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
+                    Prices are set per age range in{" "}
+                    <span className="font-medium">Variants &amp; stock</span> above.
+                  </p>
                   <div className="space-y-2">
                     <Label className="text-xs">Discount (%)</Label>
                     <Input
@@ -617,6 +646,9 @@ export default function EditProductPage() {
                       placeholder="0"
                       {...register("discount", { valueAsNumber: true })}
                     />
+                    <p className="text-muted-foreground text-[11px]">
+                      Applies to every age range.
+                    </p>
                   </div>
                 </CardContent>
               </Card>

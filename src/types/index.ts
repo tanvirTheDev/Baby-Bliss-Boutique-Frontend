@@ -3,7 +3,10 @@ export interface Product {
   name: string;
   slug: string;
   description: string;
+  /** Cheapest age-range price. Pricing itself lives on the variants. */
   price: number;
+  /** Dearest age-range price; equal to `price` when all ages cost the same. */
+  maxPrice: number;
   salePrice?: number;
   sku: string;
   stock: number;
@@ -58,6 +61,12 @@ export interface CartItem {
   quantity: number;
   size: ProductSize;
   color: ProductColor;
+  /**
+   * Price of the selected age range, after discount, snapshotted when the item
+   * was added. The product carries a range rather than one price, so the cart
+   * cannot re-derive this later.
+   */
+  unitPrice: number;
 }
 
 export interface WishlistItem {

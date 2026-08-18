@@ -4,6 +4,8 @@ export interface ProductVariantRow {
   id: string;
   sku: string;
   ageRange: string;
+  /** Price for this age range. */
+  price: number;
   stock: number;
   reorderLevel: number;
   isActive: boolean;
@@ -75,6 +77,7 @@ export const productVariantService = {
   create(body: {
     productId: string;
     ageRange: string;
+    price: number;
     stock?: number;
     reorderLevel?: number;
     isActive?: boolean;
@@ -82,7 +85,15 @@ export const productVariantService = {
     return api.post<VariantMutationResponse>("/variants", body);
   },
 
-  update(id: string, body: Partial<{ reorderLevel: number; isActive: boolean }>) {
+  update(
+    id: string,
+    body: Partial<{
+      price: number;
+      stock: number;
+      reorderLevel: number;
+      isActive: boolean;
+    }>
+  ) {
     return api.patch<VariantMutationResponse>(`/variants/${id}`, body);
   },
 
