@@ -103,7 +103,6 @@ export interface Order {
   status: OrderStatus;
   subtotal: number;
   shipping: number;
-  tax: number;
   total: number;
   paymentMethod: PaymentMethod;
   createdAt: string;

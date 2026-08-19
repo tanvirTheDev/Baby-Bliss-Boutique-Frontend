@@ -32,7 +32,6 @@ export function OrderSummary({
     setAppliedCoupon,
     getSubtotal,
     getShipping,
-    getTax,
     getCouponDiscount,
     getTotal,
   } = useCartStore();
@@ -43,7 +42,6 @@ export function OrderSummary({
 
   const subtotal = getSubtotal();
   const shipping = getShipping();
-  const tax = getTax();
   const discount = getCouponDiscount();
   const total = getTotal();
   const isFreeShipping = shipping === 0;
@@ -113,11 +111,6 @@ export function OrderSummary({
             {isFreeShipping ? "Free" : formatBDT(shipping)}
           </span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span>Tax</span>
-          <span className="font-medium">{formatBDT(tax)}</span>
-        </div>
-
         {discount > 0 && appliedCoupon && (
           <div className="flex justify-between text-sm text-emerald-700">
             <span className="flex items-center gap-2">

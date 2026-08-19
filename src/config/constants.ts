@@ -60,5 +60,3 @@ export const SORT_OPTIONS = [
 export const ITEMS_PER_PAGE = 12;
 
 export const FREE_SHIPPING_THRESHOLD = 50;
-
-export const TAX_RATE = 0.07;

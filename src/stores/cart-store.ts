@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartItem, ProductColor, Product } from "@/types";
-import { FREE_SHIPPING_THRESHOLD, TAX_RATE } from "@/config/constants";
+import { FREE_SHIPPING_THRESHOLD } from "@/config/constants";
 
 export interface AppliedCoupon {
   code: string;
@@ -34,7 +34,6 @@ interface CartState {
   getItemCount: () => number;
   getSubtotal: () => number;
   getShipping: () => number;
-  getTax: () => number;
   getCouponDiscount: () => number;
   getTotal: () => number;
 }
@@ -125,12 +124,10 @@ export const useCartStore = create<CartState>()(
         return subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 5.99;
       },
 
-      getTax: () => get().getSubtotal() * TAX_RATE,
-
       getCouponDiscount: () => get().appliedCoupon?.discountAmount ?? 0,
 
       getTotal: () => {
-        const gross = get().getSubtotal() + get().getShipping() + get().getTax();
+        const gross = get().getSubtotal() + get().getShipping();
         const discount = get().getCouponDiscount();
         return Math.max(0, gross - discount);
       },
