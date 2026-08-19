@@ -3,6 +3,7 @@
 import { PriceDisplay } from "@/components/ecommerce/price-display";
 import { QuantitySelector } from "@/components/ecommerce/quantity-selector";
 import { RatingStars } from "@/components/ecommerce/rating-stars";
+import { ProductCarousel } from "@/components/ecommerce/product-carousel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -362,6 +363,31 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {relatedBackend.length > 0 && (
+        <section className="mt-16">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="font-heading text-2xl font-bold">You may also love</h2>
+              {backend.category && (
+                <p className="text-muted-foreground text-sm">
+                  More from {backend.category.name}
+                </p>
+              )}
+            </div>
+            {backend.category && (
+              <Link
+                href={`/shop?categoryId=${backend.categoryId}`}
+                className="text-primary text-sm font-medium hover:underline"
+              >
+                View all
+              </Link>
+            )}
+          </div>
+
+          <ProductCarousel products={relatedBackend} />
+        </section>
+      )}
     </div>
   );
 }

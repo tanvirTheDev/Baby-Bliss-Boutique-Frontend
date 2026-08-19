@@ -1,5 +1,6 @@
 export { ProductCard } from "./product-card";
 export { ProductGrid } from "./product-grid";
+export { ProductCarousel } from "./product-carousel";
 export { CartItem } from "./cart-item";
 export { OrderSummary } from "./order-summary";
 export { PriceDisplay } from "./price-display";
