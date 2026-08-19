@@ -39,35 +39,6 @@ export function HeroBanner({
               <Button variant="outline">Browse Collections</Button>
             </Link>
           </div>
-
-          {/* Features */}
-          <div className="flex flex-wrap gap-6 pt-4">
-            {siteConfig.features.map((feature) => (
-              <div key={feature.label} className="flex items-center gap-2">
-                <div className="bg-brand-success/10 flex h-6 w-6 items-center justify-center rounded-full">
-                  <svg
-                    className="text-brand-success h-3.5 w-3.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={3}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase">{feature.label}</p>
-                  <p className="text-muted-foreground text-[10px]">
-                    {feature.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* Image */}

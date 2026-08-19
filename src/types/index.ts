@@ -3,14 +3,16 @@ export interface Product {
   name: string;
   slug: string;
   description: string;
+  /** Cheapest age-range price. Pricing itself lives on the variants. */
   price: number;
+  /** Dearest age-range price; equal to `price` when all ages cost the same. */
+  maxPrice: number;
   salePrice?: number;
   sku: string;
   stock: number;
   lowStockAlert?: number;
   category: ProductCategory;
   images: ProductImage[];
-  sizes: ProductSize[];
   colors: ProductColor[];
   gender: Gender;
   ageGroup: AgeGroup;
@@ -36,8 +38,6 @@ export interface ProductColor {
   hex: string;
 }
 
-export type ProductSize = "NB" | "0-3M" | "3-6M" | "6-12M" | "1Y" | "2Y";
-
 export type ProductCategory =
   | "onesies"
   | "sleepwear"
@@ -56,8 +56,13 @@ export interface CartItem {
   product: Product;
   variantId: string;
   quantity: number;
-  size: ProductSize;
   color: ProductColor;
+  /**
+   * Price of the selected age range, after discount, snapshotted when the item
+   * was added. The product carries a range rather than one price, so the cart
+   * cannot re-derive this later.
+   */
+  unitPrice: number;
 }
 
 export interface WishlistItem {
@@ -98,7 +103,6 @@ export interface Order {
   status: OrderStatus;
   subtotal: number;
   shipping: number;
-  tax: number;
   total: number;
   paymentMethod: PaymentMethod;
   createdAt: string;
@@ -108,7 +112,6 @@ export interface Order {
 export interface OrderItem {
   product: Pick<Product, "id" | "name" | "images">;
   quantity: number;
-  size: ProductSize;
   color: ProductColor;
   price: number;
 }
@@ -161,7 +164,6 @@ export interface DashboardStats {
 
 export interface ProductFilters {
   category?: ProductCategory;
-  size?: ProductSize;
   color?: string;
   gender?: Gender;
   minPrice?: number;

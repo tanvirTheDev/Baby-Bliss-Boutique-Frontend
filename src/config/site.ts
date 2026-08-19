@@ -29,13 +29,11 @@ export const siteConfig = {
         { label: "Best Sellers", href: "/shop?sort=popular" },
         { label: "Organic Cotton", href: "/shop?tag=organic" },
         { label: "Gifts", href: "/shop?category=gifts" },
-        { label: "Size Guide", href: "/size-guide" },
       ],
       information: [
         { label: "Privacy Policy", href: "/privacy" },
         { label: "Shipping & Returns", href: "/shipping" },
         { label: "Wholesale", href: "/wholesale" },
-        { label: "Size Guide", href: "/size-guide" },
       ],
     },
   },

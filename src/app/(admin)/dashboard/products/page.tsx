@@ -21,7 +21,13 @@ import {
 import { useCategories } from "@/hooks/use-categories";
 import { useDeleteProduct, useProducts, useUpdateProduct } from "@/hooks/use-products";
 import { cn } from "@/lib/utils";
-import { totalVariantStock, type BackendProduct } from "@/services/products";
+import {
+  displayPrice,
+  hasPriceRange,
+  maxDisplayPrice,
+  totalVariantStock,
+  type BackendProduct,
+} from "@/services/products";
 import {
   AlertTriangle,
   ChevronLeft,
@@ -352,7 +358,11 @@ export default function ProductManagementPage() {
                 >
                   {catLabel}
                 </Badge>
-                <span className="text-sm font-medium">৳{product.price.toFixed(2)}</span>
+                <span className="text-sm font-medium">
+                  {hasPriceRange(product)
+                    ? `৳${displayPrice(product).toFixed(2)} – ৳${maxDisplayPrice(product).toFixed(2)}`
+                    : `৳${displayPrice(product).toFixed(2)}`}
+                </span>
                 <div>
                   <span className="text-sm">{stockTotal}</span>
                   {lowStock && (

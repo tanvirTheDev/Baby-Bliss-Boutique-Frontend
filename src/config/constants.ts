@@ -1,5 +1,3 @@
-export const PRODUCT_SIZES = ["NB", "0-3M", "3-6M", "6-12M", "1Y", "2Y"] as const;
-
 export const AGE_RANGES = [
   { value: "ZERO_TO_SIX_MONTHS", label: "0-6 Months" },
   { value: "SIX_TO_TWELVE_MONTHS", label: "6-12 Months" },
@@ -62,5 +60,3 @@ export const SORT_OPTIONS = [
 export const ITEMS_PER_PAGE = 12;
 
 export const FREE_SHIPPING_THRESHOLD = 50;
-
-export const TAX_RATE = 0.07;

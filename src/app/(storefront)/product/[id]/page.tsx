@@ -3,7 +3,7 @@
 import { PriceDisplay } from "@/components/ecommerce/price-display";
 import { QuantitySelector } from "@/components/ecommerce/quantity-selector";
 import { RatingStars } from "@/components/ecommerce/rating-stars";
-import { SizePicker } from "@/components/ecommerce/size-picker";
+import { ProductCarousel } from "@/components/ecommerce/product-carousel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -11,14 +11,20 @@ import { AGE_RANGES } from "@/config/constants";
 import { useProduct, useRelatedProducts } from "@/hooks/use-products";
 import { backendProductToProduct, DEFAULT_CART_COLOR } from "@/lib/product-adapter";
 import { cn } from "@/lib/utils";
-import { totalVariantStock, type ProductImage } from "@/services/products";
+import {
+  applyDiscount,
+  displayPrice,
+  totalVariantStock,
+  type ProductImage,
+} from "@/services/products";
+import { formatBDT } from "@/lib/currency";
 import { useCartStore } from "@/stores/cart-store";
-import type { Product, ProductSize } from "@/types";
+import type { Product } from "@/types";
 import { ArrowLeft, ImageIcon, Loader2, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 function sortImages(images: ProductImage[]): ProductImage[] {
@@ -102,36 +108,25 @@ function ProductGallery({
 
 function ProductPurchaseBlock({
   product,
-  stockTotal,
-  defaultVariantId,
+  variantStock,
+  variantId,
+  unitPrice,
 }: {
   product: Product;
-  stockTotal: number;
-  defaultVariantId: string;
+  /** Stock of the selected age range, not the product total. */
+  variantStock: number;
+  variantId: string;
+  /** Discounted price of the selected age range, charged by the cart. */
+  unitPrice: number;
 }) {
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
-  const maxQty = Math.max(1, stockTotal);
-  const [selectedSize, setSelectedSize] = useState<ProductSize | null>(
-    () => product.sizes[0] ?? null
-  );
+  const maxQty = Math.max(1, variantStock);
   const [quantity, setQuantity] = useState(1);
   const qty = Math.min(quantity, maxQty);
 
   return (
     <>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Size</p>
-          <span className="text-muted-foreground text-xs">Select a size</span>
-        </div>
-        <SizePicker
-          selectedSize={selectedSize}
-          availableSizes={product.sizes}
-          onSelect={setSelectedSize}
-        />
-      </div>
-
       <div className="flex items-center gap-4">
         <QuantitySelector
           quantity={qty}
@@ -140,17 +135,17 @@ function ProductPurchaseBlock({
         />
         <Button
           className="bg-brand-olive hover:bg-brand-olive/90 flex-1 text-white"
-          disabled={stockTotal <= 0}
+          disabled={variantStock <= 0 || !variantId}
           onClick={() => {
-            if (!selectedSize) {
-              toast.error("Please select a size");
+            if (!variantId) {
+              toast.error("Please select an age range");
               return;
             }
-            if (stockTotal <= 0) {
-              toast.error("This product is out of stock");
+            if (variantStock <= 0) {
+              toast.error("This age range is out of stock");
               return;
             }
-            addItem(product, defaultVariantId, selectedSize, DEFAULT_CART_COLOR, qty);
+            addItem(product, variantId, DEFAULT_CART_COLOR, qty, unitPrice);
             toast.success("Added to cart");
           }}
         >
@@ -162,14 +157,10 @@ function ProductPurchaseBlock({
       <Button
         variant="outline"
         className="w-full"
-        disabled={stockTotal <= 0}
+        disabled={variantStock <= 0 || !variantId}
         onClick={() => {
-          if (!selectedSize) {
-            toast.error("Please select a size");
-            return;
-          }
-          if (stockTotal <= 0) return;
-          addItem(product, defaultVariantId, selectedSize, DEFAULT_CART_COLOR, qty);
+          if (!variantId || variantStock <= 0) return;
+          addItem(product, variantId, DEFAULT_CART_COLOR, qty, unitPrice);
           router.push("/checkout");
         }}
       >
@@ -196,14 +187,41 @@ export default function ProductDetailPage() {
     [backend]
   );
 
-  const ageRangesForDisplay = useMemo(() => {
-    if (!backend) return [] as string[];
-    if (backend.ageRange?.length) return backend.ageRange;
-    return [...new Set((backend.variants ?? []).map((v) => v.ageRange))];
-  }, [backend]);
+  // Each age range is its own variant with its own price and stock.
+  const sellableVariants = useMemo(
+    () => (backend?.variants ?? []).filter((v) => v.isActive !== false),
+    [backend]
+  );
+
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+
+  // Default to the first age range that can actually be bought.
+  useEffect(() => {
+    if (sellableVariants.length === 0) {
+      setSelectedVariantId(null);
+      return;
+    }
+    setSelectedVariantId((current) =>
+      current && sellableVariants.some((v) => v.id === current)
+        ? current
+        : (sellableVariants.find((v) => v.stock > 0) ?? sellableVariants[0]).id
+    );
+  }, [sellableVariants]);
+
+  const selectedVariant =
+    sellableVariants.find((v) => v.id === selectedVariantId) ?? null;
 
   const stockTotal = backend ? totalVariantStock(backend) : 0;
-  const defaultVariantId = backend?.variants?.[0]?.id ?? "";
+  const variantStock = selectedVariant?.stock ?? 0;
+
+  // Price shown and price charged both come from the selected age range.
+  const selectedBasePrice =
+    selectedVariant?.price ?? (backend ? displayPrice(backend) : 0);
+  const selectedSalePrice =
+    backend?.discount != null && backend.discount > 0
+      ? applyDiscount(selectedBasePrice, backend.discount)
+      : undefined;
+  const selectedUnitPrice = selectedSalePrice ?? selectedBasePrice;
 
   const isOrganic =
     backend?.tags?.some((t) => t.toLowerCase().includes("organic")) ?? false;
@@ -264,35 +282,73 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          <PriceDisplay price={product.price} salePrice={product.salePrice} size="lg" />
+          <PriceDisplay
+            price={selectedBasePrice}
+            salePrice={selectedSalePrice}
+            size="lg"
+          />
 
           {stockTotal <= 0 ? (
             <Badge variant="destructive">Out of stock</Badge>
+          ) : variantStock <= 0 ? (
+            <Badge variant="destructive">Out of stock for this age</Badge>
           ) : (
-            <p className="text-muted-foreground text-sm">{stockTotal} in stock</p>
+            <p className="text-muted-foreground text-sm">
+              {variantStock} in stock for this age
+            </p>
           )}
 
-          {ageRangesForDisplay.length > 0 && (
+          {sellableVariants.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Age ranges</p>
-                <span className="text-muted-foreground text-xs">Selected in admin</span>
+                <p className="text-sm font-medium">Age</p>
+                <span className="text-muted-foreground text-xs">Price varies by age</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {ageRangeLabels(ageRangesForDisplay).map((label) => (
-                  <Badge key={label} variant="secondary">
-                    {label}
-                  </Badge>
-                ))}
+                {sellableVariants.map((v) => {
+                  const label = ageRangeLabels([v.ageRange])[0];
+                  const isSelected = v.id === selectedVariantId;
+                  const soldOut = v.stock <= 0;
+                  const price =
+                    backend.discount != null && backend.discount > 0
+                      ? applyDiscount(v.price, backend.discount)
+                      : v.price;
+
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setSelectedVariantId(v.id)}
+                      disabled={soldOut}
+                      aria-pressed={isSelected}
+                      className={cn(
+                        "flex min-w-[92px] flex-col items-start rounded-md border px-3 py-2 text-left transition-colors",
+                        isSelected
+                          ? "border-brand-olive bg-brand-olive/10"
+                          : "border-input hover:bg-accent",
+                        soldOut && "cursor-not-allowed opacity-50 hover:bg-transparent"
+                      )}
+                    >
+                      <span className="text-xs font-medium">{label}</span>
+                      <span className="text-sm font-semibold">{formatBDT(price)}</span>
+                      {soldOut && (
+                        <span className="text-muted-foreground text-[10px]">
+                          Sold out
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
 
           <ProductPurchaseBlock
-            key={product.id}
+            key={`${product.id}-${selectedVariantId ?? "none"}`}
             product={product}
-            stockTotal={stockTotal}
-            defaultVariantId={defaultVariantId}
+            variantStock={variantStock}
+            variantId={selectedVariantId ?? ""}
+            unitPrice={selectedUnitPrice}
           />
 
           <Separator />
@@ -307,6 +363,31 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {relatedBackend.length > 0 && (
+        <section className="mt-16">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="font-heading text-2xl font-bold">You may also love</h2>
+              {backend.category && (
+                <p className="text-muted-foreground text-sm">
+                  More from {backend.category.name}
+                </p>
+              )}
+            </div>
+            {backend.category && (
+              <Link
+                href={`/shop?categoryId=${backend.categoryId}`}
+                className="text-primary text-sm font-medium hover:underline"
+              >
+                View all
+              </Link>
+            )}
+          </div>
+
+          <ProductCarousel products={relatedBackend} />
+        </section>
+      )}
     </div>
   );
 }

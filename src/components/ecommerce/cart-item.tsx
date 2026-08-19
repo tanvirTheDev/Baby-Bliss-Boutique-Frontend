@@ -38,15 +38,11 @@ export function CartItem({ item }: CartItemProps) {
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-sm font-medium">{item.product.name}</h3>
-            <p className="text-muted-foreground text-xs">
-              Size: {item.size}
-              {item.color && (
-                <>
-                  {" "}
-                  &middot; Color: <span className="capitalize">{item.color.name}</span>
-                </>
-              )}
-            </p>
+            {item.color && (
+              <p className="text-muted-foreground text-xs">
+                Color: <span className="capitalize">{item.color.name}</span>
+              </p>
+            )}
           </div>
           <p className="text-sm font-semibold">
             {formatBDT(effectivePrice * item.quantity)}
@@ -60,7 +56,6 @@ export function CartItem({ item }: CartItemProps) {
               updateQuantity(
                 item.product.id,
                 item.variantId,
-                item.size,
                 item.color.name,
                 item.quantity + 1
               )
@@ -69,7 +64,6 @@ export function CartItem({ item }: CartItemProps) {
               updateQuantity(
                 item.product.id,
                 item.variantId,
-                item.size,
                 item.color.name,
                 item.quantity - 1
               )
@@ -79,9 +73,7 @@ export function CartItem({ item }: CartItemProps) {
             variant="ghost"
             size="icon"
             className="text-muted-foreground hover:text-destructive h-8 w-8"
-            onClick={() =>
-              removeItem(item.product.id, item.variantId, item.size, item.color.name)
-            }
+            onClick={() => removeItem(item.product.id, item.variantId, item.color.name)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
