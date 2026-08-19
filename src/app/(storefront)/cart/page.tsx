@@ -4,11 +4,22 @@ import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Lock, Gift } from "lucide-react";
 import { CartItem } from "@/components/ecommerce/cart-item";
 import { OrderSummary } from "@/components/ecommerce/order-summary";
-import { ProductGrid } from "@/components/ecommerce/product-grid";
+import { ProductCarousel } from "@/components/ecommerce/product-carousel";
+import { useRelatedProducts } from "@/hooks/use-products";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useCartStore } from "@/stores/cart-store";
 
 export default function CartPage() {
   const { items } = useCartStore();
+  const hydrated = useHydrated();
+
+  // Suggestions hang off the first basket item, which keeps the strip stable as
+  // more items are added rather than reshuffling on every change.
+  const { data: related = [] } = useRelatedProducts(items[0]?.product.id ?? "");
+
+  // Never recommend something already in the basket.
+  const inBasket = new Set(items.map((item) => item.product.id));
+  const suggestions = related.filter((product) => !inBasket.has(product.id));
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -63,16 +74,22 @@ export default function CartPage() {
         </div>
       )}
 
-      {/* Recommendations */}
-      <section className="mt-16">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-heading text-2xl font-bold">You may also love...</h2>
-          <Link href="/shop" className="text-primary text-sm font-medium hover:underline">
-            Browse all collections
-          </Link>
-        </div>
-        <ProductGrid products={[]} columns={4} />
-      </section>
+      {/* Recommendations — gated on hydration because the basket they are
+          derived from is localStorage-backed. */}
+      {hydrated && suggestions.length > 0 && (
+        <section className="mt-16">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="font-heading text-2xl font-bold">You may also love...</h2>
+            <Link
+              href="/shop"
+              className="text-primary text-sm font-medium hover:underline"
+            >
+              Browse all collections
+            </Link>
+          </div>
+          <ProductCarousel products={suggestions} />
+        </section>
+      )}
     </div>
   );
 }
