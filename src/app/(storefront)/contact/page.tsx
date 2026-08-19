@@ -27,10 +27,6 @@ const FAQS = [
     a: "Inside Dhaka: 1–2 business days. Outside Dhaka: 3–5 business days. Express options available at checkout.",
   },
   {
-    q: "What is your return policy?",
-    a: "We accept returns within 7 days of delivery for unworn, unwashed items with original tags. Contact us to initiate a return.",
-  },
-  {
     q: "Are all products made from organic cotton?",
     a: "Yes. Every fabric we use is GOTS-certified organic cotton. You'll see the certification on each product page.",
   },
