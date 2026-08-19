@@ -3,7 +3,7 @@
 import { PriceDisplay } from "@/components/ecommerce/price-display";
 import { QuantitySelector } from "@/components/ecommerce/quantity-selector";
 import { RatingStars } from "@/components/ecommerce/rating-stars";
-import { StorefrontProductCard } from "@/components/ecommerce/storefront-product-card";
+import { ProductCarousel } from "@/components/ecommerce/product-carousel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -385,11 +385,7 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-            {relatedBackend.slice(0, 4).map((related) => (
-              <StorefrontProductCard key={related.id} product={related} />
-            ))}
-          </div>
+          <ProductCarousel products={relatedBackend} />
         </section>
       )}
     </div>
